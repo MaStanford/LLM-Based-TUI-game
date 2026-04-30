@@ -150,6 +150,7 @@ def _execute_ram_behavior(enemy, game_state, edata):
     dx = tx - enemy.x
     dy = ty - enemy.y
     dist = math.sqrt(dx * dx + dy * dy)
+    dt = enemy.ai_state.get("_dt", 1.0 / 30.0)
 
     # Initialize sub-state if not set
     if "ram_substate" not in enemy.ai_state:
@@ -175,7 +176,7 @@ def _execute_ram_behavior(enemy, game_state, edata):
         if dist > 0:
             enemy.vx = -(dx / dist) * edata.speed * 0.8
             enemy.vy = -(dy / dist) * edata.speed * 0.8
-        enemy.ai_state["ram_timer"] -= 1.0 / 30.0  # Approximate frame time
+        enemy.ai_state["ram_timer"] -= dt
         if enemy.ai_state["ram_timer"] <= 0:
             enemy.ai_state["ram_substate"] = "waiting"
             enemy.ai_state["ram_timer"] = random.uniform(0.4, 0.8)
@@ -184,7 +185,7 @@ def _execute_ram_behavior(enemy, game_state, edata):
         # Hold position briefly before charging again
         enemy.vx *= 0.85
         enemy.vy *= 0.85
-        enemy.ai_state["ram_timer"] -= 1.0 / 30.0
+        enemy.ai_state["ram_timer"] -= dt
         if enemy.ai_state["ram_timer"] <= 0:
             enemy.ai_state["ram_substate"] = "charging"
 
@@ -228,11 +229,12 @@ def _execute_patrol_behavior(enemy, game_state, edata):
 
 def _execute_deploy_mine_behavior(enemy, game_state, edata):
     """Flees from the target and deploys a mine."""
+    dt = enemy.ai_state.get("_dt", 1.0 / 30.0)
     if "mine_cooldown" not in enemy.ai_state:
         enemy.ai_state["mine_cooldown"] = 0
 
     if enemy.ai_state["mine_cooldown"] > 0:
-        enemy.ai_state["mine_cooldown"] -= 1
+        enemy.ai_state["mine_cooldown"] -= dt
         _execute_chase_behavior(enemy, game_state, edata)
         return
 
@@ -250,7 +252,7 @@ def _execute_deploy_mine_behavior(enemy, game_state, edata):
     if dist_sq > 100:
         new_mine = Mine(enemy.x, enemy.y)
         game_state.active_obstacles.append(new_mine)
-        enemy.ai_state["mine_cooldown"] = 150  # 5 seconds cooldown
+        enemy.ai_state["mine_cooldown"] = 5.0  # 5 seconds cooldown
 
 
 # --- New shooting behaviors ---
@@ -360,8 +362,10 @@ BEHAVIOR_MAP = {
 }
 
 
-def execute_behavior(behavior_name, enemy, game_state, edata):
+def execute_behavior(behavior_name, enemy, game_state, edata, dt=None):
     """Look up and execute a behavior by name."""
+    if dt is not None:
+        enemy.ai_state["_dt"] = dt
     fn = BEHAVIOR_MAP.get(behavior_name)
     if fn:
         fn(enemy, game_state, edata)

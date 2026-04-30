@@ -1,10 +1,9 @@
 import math
 import random
-import importlib
 from .entities.weapon import Weapon
 from .logic.entity_loader import PLAYER_CARS
-from .data import *
-from .data.game_constants import LEVEL_STAT_BONUS_PER_LEVEL, MAX_LEVEL
+from .data.game_constants import LEVEL_STAT_BONUS_PER_LEVEL, MAX_LEVEL, SAFE_ZONE_RADIUS, DESPAWN_RADIUS, GLOBAL_SPEED_MULTIPLIER
+from .data.difficulty import DIFFICULTY_MODIFIERS
 from .data.equipment import EQUIPMENT_SLOTS
 
 class GameState:
@@ -240,13 +239,14 @@ class GameState:
         self.apply_equipment_bonuses()
 
     def apply_equipment_bonuses(self):
-        """Applies stat modifiers from all equipped equipment."""
+        """Applies stat modifiers from all equipped equipment.
+        Bonuses stack additively: two 1.2x pieces give 1.4x, not 1.44x."""
         combined = {}
         for slot_name, equipment in self.equipped_equipment.items():
             if equipment:
                 for stat, multiplier in equipment.stat_bonuses.items():
                     if stat in combined:
-                        combined[stat] = combined[stat] * multiplier
+                        combined[stat] += (multiplier - 1.0)
                     else:
                         combined[stat] = multiplier
 
@@ -275,7 +275,7 @@ class GameState:
             self.gas_capacity = new_cap
             self.current_gas = min(self.gas_capacity, self.current_gas + increase)
         if "fuel_efficiency" in combined:
-            self.gas_consumption_rate *= (2.0 - combined["fuel_efficiency"])
+            self.gas_consumption_rate *= max(0.1, 2.0 - combined["fuel_efficiency"])
 
     def to_dict(self):
         """Serializes the game state to a dictionary."""

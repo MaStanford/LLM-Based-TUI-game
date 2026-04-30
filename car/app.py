@@ -42,27 +42,28 @@ class GenesisModuleApp(App):
         # Game state will be initialized upon starting a new game
         self.game_state = None
         self.world = None
-        self.audio_manager = AudioManager()
         self.frame_count = 0
         self.last_update_time = time.time()
         self.game_loop = None
-        self.settings = load_settings()
-        self.dev_mode = self.settings.get("dev_mode", False)
+        self.game_settings = load_settings()
+        self.audio_manager = AudioManager()
+        self.audio_manager.enabled = self.game_settings.get("sfx_enabled", True)
+        self.dev_mode = self.game_settings.get("dev_mode", False)
         self.data = game_data
-        self.generation_mode = self.settings.get("generation_mode", "local")
-        self.model_size = self.settings.get("model_size", "small")
-        self.cli_preset = self.settings.get("cli_preset", "gemini")
-        self.custom_cli_command = self.settings.get("custom_cli_command", "")
-        self.custom_cli_args = self.settings.get("custom_cli_args", "")
-        self.dev_quick_start = self.settings.get("dev_quick_start", False)
+        self.generation_mode = self.game_settings.get("generation_mode", "local")
+        self.model_size = self.game_settings.get("model_size", "small")
+        self.cli_preset = self.game_settings.get("cli_preset", "gemini")
+        self.custom_cli_command = self.game_settings.get("custom_cli_command", "")
+        self.custom_cli_args = self.game_settings.get("custom_cli_args", "")
+        self.dev_quick_start = self.game_settings.get("dev_quick_start", False)
         self.last_grid_pos = (None, None)
         self.current_save_name = None
 
     def reload_dynamic_data(self):
         """Forces a reload of the data modules to pick up generated content."""
         try:
-            # We no longer need to reload the faction module this way
-            # importlib.reload(faction_data_module)
+            from .logic.data_loader import reload_all
+            reload_all()
             importlib.reload(self.data)
             logging.info("Dynamic game data reloaded successfully.")
         except Exception as e:
@@ -163,7 +164,7 @@ class GenesisModuleApp(App):
                 spawn_turrets(gs, self.world)
                 gs.turret_spawn_timer = 5.0
             
-            quest_notifications = update_quests(gs, self.audio_manager, self)
+            quest_notifications = update_quests(gs, self.audio_manager, self, dt)
             for notification in quest_notifications:
                 world_screen.query_one("#notifications", Notifications).add_notification(notification)
 
@@ -242,82 +243,49 @@ class GenesisModuleApp(App):
     def find_closest_entity(self):
         """Finds the closest enemy, obstacle, or fauna to the player."""
         gs = self.game_state
-        closest = None
-        min_dist_sq = CUTSCENE_RADIUS**2
+        radius_sq = CUTSCENE_RADIUS**2
 
-        # Prioritize finding the closest faction boss
-        for enemy in gs.active_enemies:
-            if getattr(enemy, "is_faction_boss", False):
-                dist_sq = (enemy.x - gs.car_world_x)**2 + (enemy.y - gs.car_world_y)**2
-                if dist_sq < min_dist_sq:
-                    min_dist_sq = dist_sq
-                    art = enemy.get_static_art()
-                    closest = {
-                        "name": enemy.name, "hp": enemy.durability, "max_hp": enemy.max_durability,
-                        "art": art, "x": enemy.x, "y": enemy.y,
-                        "description": getattr(enemy, "description", ""),
-                    }
+        def _make_info(entity, name=None, desc=None):
+            return {
+                "name": name or getattr(entity, "name", entity.__class__.__name__.replace("_", " ").title()),
+                "hp": entity.durability, "max_hp": entity.max_durability,
+                "art": entity.get_static_art(), "x": entity.x, "y": entity.y,
+                "description": desc or getattr(entity, "description", ""),
+            }
 
-        # If no boss is nearby, find the closest normal enemy
-        if not closest:
-            for enemy in gs.active_enemies:
-                dist_sq = (enemy.x - gs.car_world_x)**2 + (enemy.y - gs.car_world_y)**2
-                if dist_sq < min_dist_sq:
-                    min_dist_sq = dist_sq
-                    art = enemy.get_static_art()
-                    closest = {
-                        "name": getattr(enemy, "name", enemy.__class__.__name__.replace("_", " ").title()),
-                        "hp": enemy.durability, "max_hp": enemy.max_durability,
-                        "art": art, "x": enemy.x, "y": enemy.y,
-                        "description": getattr(enemy, "description", ""),
-                    }
-
-        # Also check obstacles (only if damaged by player)
-        if not closest:
-            for obstacle in gs.active_obstacles:
-                if obstacle.durability >= obstacle.max_durability:
+        def _find_nearest(entities, filter_fn=None):
+            best, best_dist = None, radius_sq
+            for e in entities:
+                if filter_fn and not filter_fn(e):
                     continue
-                dist_sq = (obstacle.x - gs.car_world_x)**2 + (obstacle.y - gs.car_world_y)**2
-                if dist_sq < min_dist_sq:
-                    min_dist_sq = dist_sq
-                    art = obstacle.get_static_art()
-                    closest = {
-                        "name": getattr(obstacle, "name", obstacle.__class__.__name__.replace("_", " ").title()),
-                        "hp": obstacle.durability, "max_hp": obstacle.max_durability,
-                        "art": art, "x": obstacle.x, "y": obstacle.y,
-                        "description": getattr(obstacle, "description", ""),
-                    }
+                d = (e.x - gs.car_world_x)**2 + (e.y - gs.car_world_y)**2
+                if d < best_dist:
+                    best_dist = d
+                    best = e
+            return best
 
-        # Also check fauna (only if damaged by player)
-        if not closest:
-            for fauna in gs.active_fauna:
-                if fauna.durability >= fauna.max_durability:
-                    continue
-                dist_sq = (fauna.x - gs.car_world_x)**2 + (fauna.y - gs.car_world_y)**2
-                if dist_sq < min_dist_sq:
-                    min_dist_sq = dist_sq
-                    art = fauna.get_static_art()
-                    closest = {
-                        "name": getattr(fauna, "name", fauna.__class__.__name__.replace("_", " ").title()),
-                        "hp": fauna.durability, "max_hp": fauna.max_durability,
-                        "art": art, "x": fauna.x, "y": fauna.y,
-                        "description": getattr(fauna, "description", ""),
-                    }
+        # Priority: boss > enemy > damaged obstacle > damaged fauna > turret
+        boss = _find_nearest(gs.active_enemies, lambda e: getattr(e, "is_faction_boss", False))
+        if boss:
+            return _make_info(boss)
 
-        # Check turrets
-        if not closest:
-            for turret in gs.active_turrets:
-                dist_sq = (turret.x - gs.car_world_x)**2 + (turret.y - gs.car_world_y)**2
-                if dist_sq < min_dist_sq:
-                    min_dist_sq = dist_sq
-                    art = turret.get_static_art()
-                    closest = {
-                        "name": turret.name, "hp": turret.durability, "max_hp": turret.max_durability,
-                        "art": art, "x": turret.x, "y": turret.y,
-                        "description": getattr(turret, "description", "Defense turret"),
-                    }
+        enemy = _find_nearest(gs.active_enemies)
+        if enemy:
+            return _make_info(enemy)
 
-        return closest
+        obstacle = _find_nearest(gs.active_obstacles, lambda o: o.durability < o.max_durability)
+        if obstacle:
+            return _make_info(obstacle)
+
+        fauna = _find_nearest(gs.active_fauna, lambda f: f.durability < f.max_durability)
+        if fauna:
+            return _make_info(fauna)
+
+        turret = _find_nearest(gs.active_turrets)
+        if turret:
+            return _make_info(turret, desc="Defense turret")
+
+        return None
 
     def update_compass_data(self):
         """Calculates the compass direction and caches it in the game state."""

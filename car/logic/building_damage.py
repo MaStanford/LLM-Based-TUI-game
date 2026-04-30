@@ -130,12 +130,13 @@ def _apply_faction_consequences(game_state, city_key):
 def _spawn_retaliation_wave(game_state, faction_id):
     """Spawn a wave of enemies near the player as retaliation."""
     import math
-    from ..logic.entity_loader import ENEMY_VEHICLES
+    from ..logic.entity_loader import ENEMY_VEHICLES, ENEMY_CHARACTERS, normalize_class_name
 
     faction_units = game_state.factions.get(faction_id, {}).get("units", [])
+    all_enemy_classes = ENEMY_VEHICLES + ENEMY_CHARACTERS
     possible_vehicles = [
-        e for e in ENEMY_VEHICLES
-        if any(e.__name__.lower() == unit.lower() for unit in faction_units)
+        e for e in all_enemy_classes
+        if any(normalize_class_name(e.__name__) == normalize_class_name(unit) for unit in faction_units)
     ]
     if not possible_vehicles:
         possible_vehicles = ENEMY_VEHICLES[:1]  # Fallback

@@ -113,7 +113,7 @@ class GuardTruck(Vehicle):
             # Combat phases use budget-aware transitions
             self._advance_phase(game_state, dt)
 
-        execute_behavior(self.current_phase["behavior"], self, game_state, self)
+        execute_behavior(self.current_phase["behavior"], self, game_state, self, dt=dt)
 
         self._move_with_terrain_check(world, dt)
 

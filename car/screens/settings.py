@@ -35,6 +35,9 @@ class SettingsScreen(Screen):
                 yield Static("", id="sub_option_label", classes="setting-label")
                 yield Button("", id="toggle_sub_option")
 
+                yield Static("Sound Effects", classes="setting-label")
+                yield Button(self._sfx_label(), id="toggle_sfx")
+
                 yield Static("Dev Mode", classes="setting-label")
                 yield Button(self._dev_mode_label(), id="toggle_dev_mode")
 
@@ -96,6 +99,10 @@ class SettingsScreen(Screen):
             labels = {"gemini": "Google Gemini", "claude": "Anthropic Claude"}
             return labels.get(preset, preset)
 
+    def _sfx_label(self) -> str:
+        enabled = self.settings.get("sfx_enabled", True)
+        return f"Sound Effects: {'On' if enabled else 'Off'}"
+
     def _dev_mode_label(self) -> str:
         dev_mode = self.settings.get("dev_mode", False)
         return f"Dev Mode: {'On' if dev_mode else 'Off'}"
@@ -156,6 +163,14 @@ class SettingsScreen(Screen):
                     self.notify(f"CLI provider set to {tool_name}.", severity="information", timeout=3.0)
 
             event.button.label = self._sub_option_button_label()
+
+        elif event.button.id == "toggle_sfx":
+            current = self.settings.get("sfx_enabled", True)
+            new_val = not current
+            self.settings["sfx_enabled"] = new_val
+            save_settings(self.settings)
+            event.button.label = self._sfx_label()
+            self.app.audio_manager.enabled = new_val
 
         elif event.button.id == "toggle_dev_mode":
             current_dev_mode = self.settings.get("dev_mode", False)

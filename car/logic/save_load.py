@@ -77,15 +77,19 @@ def load_game(save_name):
             shutil.copy2(source_path, dest_path)
     logging.info(f"Copied all files from {save_slot_dir} to {TEMP_DIR}")
             
-    # --- 3. Load the GameState object from the new temp file ---
+    # --- 3. Reload cached data so every module sees the restored files ---
+    from .data_loader import reload_all
+    reload_all()
+
+    # --- 4. Load the GameState object from the new temp file ---
     game_state_path = os.path.join(TEMP_DIR, GAME_STATE_FILE)
     if not os.path.exists(game_state_path):
         logging.error(f"game_state.json not found in save slot: {save_name}")
         return None
-        
+
     with open(game_state_path, "r") as f:
         game_state_dict = json.load(f)
-    
+
     # The GameState's from_dict method will handle loading the factions
     # via the data_loader, which now correctly points to temp/
     logging.info("Loading GameState from dictionary...")

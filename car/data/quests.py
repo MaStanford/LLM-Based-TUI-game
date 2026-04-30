@@ -19,16 +19,20 @@ class KillBossObjective(Objective):
     def __init__(self, boss_name):
         super().__init__()
         self.boss_name = boss_name
+        self.boss_was_seen = False
 
     def update(self, game_state):
-        # A boss is just a powerful enemy, so we check the active_enemies list
-        if not any(enemy.name == self.boss_name for enemy in game_state.active_enemies):
+        boss_alive = any(enemy.name == self.boss_name for enemy in game_state.active_enemies)
+        if boss_alive:
+            self.boss_was_seen = True
+        elif self.boss_was_seen:
             self.completed = True
 
     def to_dict(self):
         data = super().to_dict()
         data.update({
-            "boss_name": self.boss_name
+            "boss_name": self.boss_name,
+            "boss_was_seen": self.boss_was_seen,
         })
         return data
 
@@ -36,6 +40,7 @@ class KillBossObjective(Objective):
     def from_dict(cls, data):
         obj = cls(data["boss_name"])
         obj.completed = data["completed"]
+        obj.boss_was_seen = data.get("boss_was_seen", False)
         return obj
 
 class KillCountObjective(Objective):
@@ -290,9 +295,9 @@ class Quest:
         quest.combat_waypoint = tuple(wp) if wp else None
         return quest
 
-    def update(self, game_state):
+    def update(self, game_state, dt):
         if self.time_limit is not None:
-            self.time_limit -= 1
+            self.time_limit -= dt
             if self.time_limit <= 0:
                 self.failed = True
                 return
@@ -319,7 +324,7 @@ QUEST_TEMPLATES = {
             "xp": 750,
             "cash": 300,
         },
-        "time_limit": 3600, # 2 minutes
+        "time_limit": 120, # 2 minutes (seconds)
         "next_quest_id": "assassinate_rival"
     },
     "assassinate_rival": {
@@ -343,7 +348,7 @@ QUEST_TEMPLATES = {
             "xp_value": 600,
             "cash_value": 300,
         },
-        "time_limit": 4800 # 2.6 minutes
+        "time_limit": 160, # ~2.6 minutes (seconds)
     },
     "defend_outpost": {
         "name": "Defend Outpost from {target_faction_name}",
@@ -366,7 +371,7 @@ QUEST_TEMPLATES = {
         "detail_dialog": "The convoy will be passing through the Old Overpass. Get there and hold off any attackers until the convoy is clear. It should take a couple of minutes.",
         "completion_dialog": "The convoy made it through safely. You've saved a lot of lives today. Here's your payment.",
         "objectives": [
-            (DefendLocationObjective, ["Old Overpass", 3600]),
+            (DefendLocationObjective, ["Old Overpass", 120]),
         ],
         "rewards": {
             "xp": 1000,
@@ -386,7 +391,7 @@ QUEST_TEMPLATES = {
             "xp": 1500,
             "cash": 800,
         },
-        "time_limit": 5400,  # 3 minutes
+        "time_limit": 180,  # 3 minutes (seconds)
     },
     "courier_run": {
         "name": "Courier Run to {destination}",

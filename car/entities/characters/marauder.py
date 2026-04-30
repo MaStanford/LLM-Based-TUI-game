@@ -40,7 +40,7 @@ class Marauder(Character):
             self.current_phase = next((p for p in self.phases if p["name"] == new_phase_name), self.phases[0])
             self.phase_timer = random.uniform(*self.current_phase["duration"])
 
-        execute_behavior(self.current_phase["behavior"], self, game_state, self)
+        execute_behavior(self.current_phase["behavior"], self, game_state, self, dt=dt)
 
         self._move_with_terrain_check(world, dt)
 

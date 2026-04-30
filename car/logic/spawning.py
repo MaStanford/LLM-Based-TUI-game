@@ -1,6 +1,6 @@
 import random
 import math
-from .entity_loader import ENEMY_VEHICLES, ENEMY_CHARACTERS, FAUNA, OBSTACLES
+from .entity_loader import ENEMY_VEHICLES, ENEMY_CHARACTERS, FAUNA, OBSTACLES, normalize_class_name
 from ..data.game_constants import CITY_SPACING, CITY_SIZE, SAFE_ZONE_RADIUS, DESPAWN_RADIUS, MAX_FAUNA, MAX_OBSTACLES
 from ..logic.data_loader import FACTION_DATA
 from ..world.generation import get_city_faction
@@ -85,20 +85,17 @@ def spawn_enemy(game_state, world):
     if random.random() > spawn_chance:
         return
 
-    # Decide whether to spawn a vehicle or a character (e.g., 70/30 split)
-    if random.random() < 0.7:
-        # Try faction-specific vehicle first, fall back to random enemy vehicle
-        faction_units = game_state.factions.get(current_faction_id, {}).get("units", [])
-        possible_vehicles = [unit for unit in faction_units if any(e.__name__.lower() == unit.lower() for e in ENEMY_VEHICLES)]
-        if possible_vehicles:
-            enemy_name = random.choice(possible_vehicles)
-            enemy_class = next((e for e in ENEMY_VEHICLES if e.__name__.lower() == enemy_name.lower()), None)
-        else:
-            # Faction units don't match any known vehicle classes — spawn a random enemy vehicle
-            enemy_class = random.choice(ENEMY_VEHICLES)
-            enemy_name = enemy_class.__name__
+    # Try faction-specific units first, then fall back to random
+    faction_units = game_state.factions.get(current_faction_id, {}).get("units", [])
+    all_enemy_classes = ENEMY_VEHICLES + ENEMY_CHARACTERS
+    possible_units = [unit for unit in faction_units if any(normalize_class_name(e.__name__) == normalize_class_name(unit) for e in all_enemy_classes)]
+    if possible_units:
+        enemy_name = random.choice(possible_units)
+        enemy_class = next((e for e in all_enemy_classes if normalize_class_name(e.__name__) == normalize_class_name(enemy_name)), None)
+    elif random.random() < 0.7:
+        enemy_class = random.choice(ENEMY_VEHICLES)
+        enemy_name = enemy_class.__name__
     else:
-        # Spawn a random character (neutral)
         enemy_class = random.choice(ENEMY_CHARACTERS)
         enemy_name = enemy_class.__name__
 
@@ -134,7 +131,6 @@ def spawn_enemy(game_state, world):
         game_state.active_enemies.append(new_enemy)
 
         # Group spawning: chance to spawn additional enemies of the same type
-        max_enemies = game_state.difficulty_mods.get("max_enemies", 12)
         roll = random.random()
         extra_count = 0
         if roll < 0.05:

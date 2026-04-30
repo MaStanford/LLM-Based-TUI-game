@@ -4,8 +4,7 @@ from textual.containers import Grid, Vertical
 from textual.binding import Binding
 from rich.text import Text
 from ..world.generation import get_city_name
-from ..data.game_constants import CITY_SPACING
-from ..logic.entity_loader import ALL_VEHICLES
+from ..logic.entity_loader import ALL_VEHICLES, ENEMY_CHARACTERS, normalize_class_name
 
 class ReputationBar(ProgressBar):
     """A progress bar that displays reputation from -100 to 100."""
@@ -118,15 +117,14 @@ class FactionScreen(ModalScreen):
             rep_bar.bar_style = "green"
             
         hub_x, hub_y = faction_data["hub_city_coordinates"]
-        grid_x = round(hub_x / CITY_SPACING)
-        grid_y = round(hub_y / CITY_SPACING)
-        capital_name = get_city_name(grid_x, grid_y, gs.factions, gs.world_details)
+        capital_name = get_city_name(hub_x, hub_y, gs.factions, gs.world_details)
         
         unit_names = []
         for unit_id in faction_data.get("units", []):
-            vehicle_class = next((v for v in ALL_VEHICLES if v.__name__.lower() == unit_id.lower()), None)
-            if vehicle_class:
-                unit_names.append(vehicle_class(0,0).name)
+            all_classes = list(ALL_VEHICLES) + list(ENEMY_CHARACTERS)
+            matched_class = next((v for v in all_classes if normalize_class_name(v.__name__) == normalize_class_name(unit_id)), None)
+            if matched_class:
+                unit_names.append(matched_class(0,0).name)
             else:
                 unit_names.append(unit_id.replace("_", " ").title())
         units_str = ", ".join(unit_names) if unit_names else "N/A"

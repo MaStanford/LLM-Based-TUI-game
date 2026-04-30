@@ -5,7 +5,7 @@ Only active when dev_mode is enabled.
 import math
 import logging
 
-from .entity_loader import ENEMY_VEHICLES, ENEMY_CHARACTERS, FAUNA, OBSTACLES, ALL_VEHICLES
+from .entity_loader import ENEMY_VEHICLES, ENEMY_CHARACTERS, FAUNA, OBSTACLES, ALL_VEHICLES, normalize_class_name
 
 try:
     from .boss import spawn_faction_boss
@@ -13,17 +13,12 @@ except ImportError:
     spawn_faction_boss = None
 
 
-def _normalize_class_name(name: str) -> str:
-    """Normalize a class name for matching: lowercase, no underscores."""
-    return name.lower().replace("_", "")
-
-
 def _find_entity_class(name: str, *class_lists):
     """Find an entity class by name across multiple lists."""
-    normalized = _normalize_class_name(name)
+    normalized = normalize_class_name(name)
     for class_list in class_lists:
         for cls in class_list:
-            if _normalize_class_name(cls.__name__) == normalized:
+            if normalize_class_name(cls.__name__) == normalized:
                 return cls
     return None
 

@@ -67,7 +67,22 @@ def update_physics_and_collisions(game_state, world, audio_manager, dt, app):
         
     # 6. Despawn entities that are too far away
     despawn_radius_sq = game_state.despawn_radius**2
-    game_state.active_enemies = [e for e in game_state.active_enemies if (e.x - game_state.car_world_x)**2 + (e.y - game_state.car_world_y)**2 < despawn_radius_sq]
+
+    # Collect names of quest-linked bosses that haven't been killed yet
+    quest_boss_names = set()
+    for quest in game_state.active_quests:
+        for obj in quest.objectives:
+            if hasattr(obj, 'boss_name') and not obj.completed:
+                quest_boss_names.add(obj.boss_name)
+
+    # Despawn non-boss enemies that are too far away
+    game_state.active_enemies = [
+        e for e in game_state.active_enemies
+        if (e.x - game_state.car_world_x)**2 + (e.y - game_state.car_world_y)**2 < despawn_radius_sq
+        or getattr(e, 'name', None) in quest_boss_names
+        or getattr(e, 'is_faction_boss', False)
+        or getattr(e, 'is_major_enemy', False)
+    ]
     game_state.active_fauna = [f for f in game_state.active_fauna if (f.x - game_state.car_world_x)**2 + (f.y - game_state.car_world_y)**2 < despawn_radius_sq]
     game_state.active_obstacles = [o for o in game_state.active_obstacles if (o.x - game_state.car_world_x)**2 + (o.y - game_state.car_world_y)**2 < despawn_radius_sq]
     game_state.active_turrets = [t for t in game_state.active_turrets if (t.x - game_state.car_world_x)**2 + (t.y - game_state.car_world_y)**2 < despawn_radius_sq]

@@ -50,7 +50,9 @@ OBSTACLES = [
     Rock, TirePile, ScrapBarricade, WreckedHusk, OilBarrel
 ]
 
-ALL_VEHICLES = PLAYER_CARS + ENEMY_VEHICLES
+def normalize_class_name(name: str) -> str:
+    """Normalize a class/unit name for matching: lowercase, no underscores."""
+    return name.lower().replace("_", "")
 
 
 def _populate_entities():
@@ -102,13 +104,15 @@ def _load_entity(entity_type_path, name, entity_list):
         module = importlib.import_module(module_path)
         class_name = "".join(word.capitalize() for word in name.split("_"))
         entity_class = getattr(module, class_name)
-        entity_list.append(entity_class)
+        if entity_class not in entity_list:
+            entity_list.append(entity_class)
     except (ImportError, AttributeError) as e:
-        # This should not happen if the file structure is correct
         print(f"Warning: Could not load entity '{name}': {e}")
 
 # Initial population of the entity lists
 _populate_entities()
+
+ALL_VEHICLES = PLAYER_CARS + ENEMY_VEHICLES
 
 def get_enemy_vehicle_list():
     """Returns a simple list of enemy vehicle names."""

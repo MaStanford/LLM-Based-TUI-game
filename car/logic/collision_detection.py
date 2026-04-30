@@ -24,19 +24,28 @@ def find_safe_exit_spot(world, building):
     """
     center_x, center_y = building['x'] + building['w'] // 2, building['y'] + building['h'] // 2
 
-    # Spiral search
+    # Pre-fetch buildings for the city this building is in. The spiral stays close
+    # to the building center so the city grid cell won't change.
+    city_cx = round(center_x / CITY_SPACING)
+    city_cy = round(center_y / CITY_SPACING)
+    nearby_buildings = get_buildings_in_city(city_cx, city_cy)
+
+    # Spiral search — capped at 400 iterations. A valid exit spot is always within
+    # a few units of the building edge (the spiral covers a ~20x20 area in 400 steps),
+    # which is more than enough for any building size. The old max_dist**2 cap could
+    # reach 6400+ iterations with no practical benefit.
     x, y = 0, 0
     dx, dy = 0, -1
-    max_dist = max(building['w'], building['h']) * 2 # Search a reasonable area
+    max_iterations = 400
 
-    for _ in range(max_dist**2):
+    for _ in range(max_iterations):
         check_x, check_y = center_x + x, center_y + y
         terrain = world.get_terrain_at(check_x, check_y)
 
         # Check if the spot is passable and not inside any building
         if terrain.get("passable", True) and not any(
             b['x'] <= check_x < b['x'] + b['w'] and b['y'] <= check_y < b['y'] + b['h']
-            for b in get_buildings_in_city(round(check_x / CITY_SPACING), round(check_y / CITY_SPACING))
+            for b in nearby_buildings
         ):
             return check_x, check_y
 

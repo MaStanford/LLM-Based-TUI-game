@@ -71,8 +71,32 @@ def load_triggers_data():
     return []
 
 
-# Load the data once on startup
+# Cached data — call reload_all() to refresh after generating new content
 FACTION_DATA = load_faction_data()
 _normalize_hub_coordinates(FACTION_DATA)
 WORLD_DETAILS_DATA = load_world_details_data()
 TRIGGERS_DATA = load_triggers_data()
+
+
+def reload_all():
+    """Reload all data from disk. Call after generating new world content.
+
+    Mutates the existing containers in-place so that every module which
+    imported ``FACTION_DATA``, ``WORLD_DETAILS_DATA``, or ``TRIGGERS_DATA``
+    at the top level automatically sees the refreshed data (their name
+    bindings still point to the same dict/list objects).
+    """
+    global FACTION_DATA, WORLD_DETAILS_DATA, TRIGGERS_DATA
+
+    new_factions = load_faction_data()
+    _normalize_hub_coordinates(new_factions)
+    FACTION_DATA.clear()
+    FACTION_DATA.update(new_factions)
+
+    new_world_details = load_world_details_data()
+    WORLD_DETAILS_DATA.clear()
+    WORLD_DETAILS_DATA.update(new_world_details)
+
+    new_triggers = load_triggers_data()
+    TRIGGERS_DATA.clear()
+    TRIGGERS_DATA.extend(new_triggers)

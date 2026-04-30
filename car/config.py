@@ -11,7 +11,8 @@ DEFAULT_SETTINGS = {
     "custom_cli_command": "",    # command name for custom preset (e.g. "ollama")
     "custom_cli_args": "",       # extra args for custom preset (e.g. "run llama3 -p")
     "dev_mode": False,
-    "dev_quick_start": False     # skip LLM generation and use fallback data for instant game start
+    "dev_quick_start": False,    # skip LLM generation and use fallback data for instant game start
+    "sfx_enabled": True          # enable terminal bell sound effects
 }
 
 def save_settings(settings: dict):

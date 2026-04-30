@@ -41,10 +41,11 @@ def spawn_faction_boss(game_state, faction_id):
     boss_car_class = next((c for c in PLAYER_CARS if c.__name__.lower() == boss_data["vehicle"].lower().replace(" ", "_")), None)
     if not boss_car_class: return
 
-    # Position the boss near the faction's hub city
-    hub_x, hub_y = faction_data["hub_city_coordinates"]
-    boss_x = hub_x + random.uniform(-50, 50)
-    boss_y = hub_y + random.uniform(-50, 50)
+    # Position the boss near the faction's hub city (convert grid coords to world coords)
+    from ..data.game_constants import CITY_SPACING
+    hub_gx, hub_gy = faction_data["hub_city_coordinates"]
+    boss_x = hub_gx * CITY_SPACING + random.uniform(-50, 50)
+    boss_y = hub_gy * CITY_SPACING + random.uniform(-50, 50)
 
     boss_entity = boss_car_class(boss_x, boss_y)
 

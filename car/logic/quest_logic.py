@@ -1,6 +1,6 @@
 import random
 from ..data.quests import Quest, KillBossObjective, KillCountObjective, SurvivalObjective, DeliverPackageObjective, DefendLocationObjective, WaveSpawnObjective, QuestItem, QUEST_TEMPLATES
-from ..logic.entity_loader import PLAYER_CARS, ENEMY_VEHICLES
+from ..logic.entity_loader import PLAYER_CARS, ENEMY_VEHICLES, ENEMY_CHARACTERS, normalize_class_name
 from ..entities.base import Entity
 from ..data.game_constants import CITY_SPACING
 from ..world.generation import get_buildings_in_city, get_city_faction
@@ -208,11 +208,25 @@ def _get_quest_waypoint(quest):
     return None, None
 
 
-def _spawn_quest_enemies(game_state, wx, wy, count):
+def _spawn_quest_enemies(game_state, wx, wy, count, target_faction_id=None):
     """Spawn a batch of quest enemies around a waypoint location."""
     import math
+
+    # Determine the pool of enemy classes to draw from
+    all_enemy_classes = ENEMY_VEHICLES + ENEMY_CHARACTERS
+    enemy_pool = all_enemy_classes  # default fallback
+    if target_faction_id:
+        faction_units = game_state.factions.get(target_faction_id, {}).get("units", [])
+        if faction_units:
+            matched = [
+                cls for cls in all_enemy_classes
+                if any(normalize_class_name(cls.__name__) == normalize_class_name(unit) for unit in faction_units)
+            ]
+            if matched:
+                enemy_pool = matched
+
     for _ in range(count):
-        enemy_class = random.choice(ENEMY_VEHICLES)
+        enemy_class = random.choice(enemy_pool)
         # Spawn in a ring around the waypoint
         angle = random.uniform(0, 2 * math.pi)
         dist = random.uniform(30, 70)
@@ -255,7 +269,7 @@ def _despawn_quest_enemies(game_state, wx, wy):
     game_state.active_enemies = survivors
 
 
-def update_quests(game_state, audio_manager, app):
+def update_quests(game_state, audio_manager, app, dt):
     """
     Updates the state of all active quests.
     Returns a list of notification messages.
@@ -314,9 +328,10 @@ def update_quests(game_state, audio_manager, app):
 
                     if dist_sq <= defense_radius_sq:
                         if objective.timer > 0:
-                            objective.timer -= 1
-                            if objective.timer % 30 == 0:
-                                notifications.append(f"Defending {objective.location}... {objective.timer // 30}s remaining.")
+                            objective.timer -= dt
+                            remaining_s = int(objective.timer)
+                            if remaining_s > 0 and remaining_s % 10 == 0 and abs(objective.timer - remaining_s) < 0.05:
+                                notifications.append(f"Defending {objective.location}... {remaining_s}s remaining.")
                         else:
                             objective.completed = True
                             notifications.append(f"Successfully defended {objective.location}!")
@@ -330,18 +345,18 @@ def update_quests(game_state, audio_manager, app):
                         objective.active = True
                         notifications.append(f"Survival zone reached! Hold out for {int(objective.timer)}s!")
                         # Spawn initial wave of enemies
-                        _spawn_quest_enemies(game_state, wx, wy, 3)
+                        _spawn_quest_enemies(game_state, wx, wy, 3, target_faction_id=quest.target_faction)
 
-                    # Decrement timer (called every frame at 30fps)
-                    objective.timer -= 1.0 / 30.0
+                    # Decrement timer using actual delta time for frame-rate independence
+                    objective.timer -= dt
 
                     # Spawn reinforcements periodically
                     spawn_key = "survival_spawn_timer"
                     if spawn_key not in quest.__dict__:
                         quest.__dict__[spawn_key] = QUEST_ENEMY_SPAWN_INTERVAL
-                    quest.__dict__[spawn_key] -= 1.0 / 30.0
+                    quest.__dict__[spawn_key] -= dt
                     if quest.__dict__[spawn_key] <= 0:
-                        _spawn_quest_enemies(game_state, wx, wy, random.randint(1, 3))
+                        _spawn_quest_enemies(game_state, wx, wy, random.randint(1, 3), target_faction_id=quest.target_faction)
                         quest.__dict__[spawn_key] = QUEST_ENEMY_SPAWN_INTERVAL
 
                     remaining = max(0, int(objective.timer))
@@ -364,7 +379,7 @@ def update_quests(game_state, audio_manager, app):
                         # Start the first wave
                         objective.current_wave = 1
                         objective.wave_enemies_remaining = objective.enemies_per_wave
-                        _spawn_quest_enemies(game_state, wx, wy, objective.enemies_per_wave)
+                        _spawn_quest_enemies(game_state, wx, wy, objective.enemies_per_wave, target_faction_id=quest.target_faction)
                         notifications.append(f"Wave {objective.current_wave}/{objective.total_waves} incoming!")
 
                     elif objective.wave_enemies_remaining <= 0:
@@ -372,7 +387,7 @@ def update_quests(game_state, audio_manager, app):
                         if objective.current_wave < objective.total_waves:
                             objective.current_wave += 1
                             objective.wave_enemies_remaining = objective.enemies_per_wave
-                            _spawn_quest_enemies(game_state, wx, wy, objective.enemies_per_wave)
+                            _spawn_quest_enemies(game_state, wx, wy, objective.enemies_per_wave, target_faction_id=quest.target_faction)
                             notifications.append(f"Wave {objective.current_wave}/{objective.total_waves} incoming!")
                         else:
                             objective.completed = True
@@ -383,7 +398,7 @@ def update_quests(game_state, audio_manager, app):
                     notifications.append("Return to the combat zone!")
 
         if not quest.ready_to_turn_in:
-            quest.update(game_state)
+            quest.update(game_state, dt)
 
         if quest.completed and not quest.ready_to_turn_in:
             if quest.requires_turn_in:
