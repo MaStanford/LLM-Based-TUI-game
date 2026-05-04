@@ -278,6 +278,9 @@ ones snap fast. Arrow keys still control aiming when mouse aim is off.
 | `C`            | Center on player                       |
 | `F`            | Fast travel to selected visited city   |
 | `Enter`        | Set waypoint to selected node          |
+| `Click`        | Select a city/landmark on the map      |
+| `Click again`  | Open city view (if city already selected) |
+| `Click + Drag` | Pan the map freely                     |
 | `Esc`          | Close map                              |
 
 ### Buildings

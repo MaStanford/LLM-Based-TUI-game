@@ -202,7 +202,7 @@ class GenesisModuleApp(App):
                 self.check_and_cache_quests_for_nearby_cities()
 
             # --- Update UI Widgets ---
-            world_screen.update_widgets()
+            world_screen.update_widgets(dt)
 
             # Check for building interactions
             self.check_building_interaction()

@@ -329,8 +329,13 @@ class WorldScreen(Screen):
 
         yield Footer(show_command_palette=True)
 
-    def update_widgets(self):
-        """Update the screen widgets."""
+    def update_widgets(self, dt: float = 0.033):
+        """Update the screen widgets and tick all GameTickable children."""
+        from ..widgets.tickable import GameTickable
+        for widget in self.walk_children():
+            if isinstance(widget, GameTickable):
+                widget.game_tick(dt)
+
         game_view = self.query_one("#game_view", GameView)
         game_view.refresh()
 

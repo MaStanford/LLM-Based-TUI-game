@@ -47,6 +47,95 @@ class MapView(Widget):
         self.world_nodes = []       # List of node dicts with x, y, short_name, long_name, type, grid_x, grid_y
         self.selected_node_index = -1  # -1 = no selection
 
+    def on_mouse_down(self, event) -> None:
+        """Start drag tracking."""
+        self._drag_start_x = event.x
+        self._drag_start_y = event.y
+        self._drag_camera_x = self.camera_x
+        self._drag_camera_y = self.camera_y
+        self._dragged = False
+
+    def on_mouse_move(self, event) -> None:
+        """Pan the map while dragging."""
+        if not hasattr(self, "_drag_start_x") or self._drag_start_x is None:
+            return
+        dx = event.x - self._drag_start_x
+        dy = event.y - self._drag_start_y
+        if abs(dx) > 1 or abs(dy) > 1:
+            self._dragged = True
+        if self.city_mode:
+            return
+        scale = self.WORLD_MAP_SCALE
+        self.camera_x = self._drag_camera_x - dx * scale
+        self.camera_y = self._drag_camera_y - dy * scale
+        self.refresh()
+
+    def on_mouse_up(self, event) -> None:
+        """End drag. If it was a click (no drag), select/open the clicked node."""
+        dragged = getattr(self, "_dragged", False)
+        self._drag_start_x = None
+
+        if dragged:
+            return
+
+        if self.city_mode:
+            self._handle_city_click(event.x, event.y)
+        else:
+            self._handle_world_click(event.x, event.y)
+
+    def _handle_world_click(self, sx, sy):
+        """Select the node nearest to the click. Double-click (already selected) opens city."""
+        if not self.world_nodes:
+            return
+        w, h = self.size
+        scale = self.WORLD_MAP_SCALE
+        click_world_x = self.camera_x + (sx - w / 2) * scale
+        click_world_y = self.camera_y + (sy - h / 2) * scale
+
+        best_i = -1
+        best_dist = float("inf")
+        click_radius = 3 * scale
+
+        for i, node in enumerate(self.world_nodes):
+            d = (node["x"] - click_world_x) ** 2 + (node["y"] - click_world_y) ** 2
+            if d < best_dist and d < click_radius ** 2:
+                best_dist = d
+                best_i = i
+
+        if best_i >= 0:
+            if best_i == self.selected_node_index:
+                node = self.world_nodes[best_i]
+                if node["type"] == "city":
+                    self.open_selected_city()
+                    return
+            self.selected_node_index = best_i
+            self.refresh()
+
+    def _handle_city_click(self, sx, sy):
+        """In city view, click a building to set a waypoint to it."""
+        w, h = self.size
+        margin_x, margin_y = 2, 2
+        draw_w = w - margin_x * 2
+        draw_h = h - margin_y * 2
+        if draw_w <= 0 or draw_h <= 0:
+            return
+
+        scale_x = CITY_SIZE / draw_w
+        scale_y = CITY_SIZE / draw_h
+        gx, gy = self.city_grid_x, self.city_grid_y
+        city_min_x = gx * CITY_SPACING - CITY_SIZE // 2
+        city_min_y = gy * CITY_SPACING - CITY_SIZE // 2
+
+        click_wx = city_min_x + (sx - margin_x) * scale_x
+        click_wy = city_min_y + (sy - margin_y) * scale_y
+
+        self.game_state.waypoint = {
+            "x": click_wx,
+            "y": click_wy,
+            "name": get_city_name(gx, gy, self.game_state.factions, self.game_state.world_details),
+        }
+        self.refresh()
+
     def on_mount(self) -> None:
         """Called when the widget is mounted."""
         self.camera_x = self.game_state.car_world_x

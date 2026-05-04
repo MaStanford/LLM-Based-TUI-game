@@ -3,6 +3,7 @@ from textual.reactive import reactive
 from rich.text import Text
 from rich.panel import Panel
 from rich.style import Style
+from .tickable import GameTickable
 import time
 import random
 import math
@@ -48,7 +49,7 @@ _DESTROY_SMOKE = [
 ]
 
 
-class EntityModal(Widget):
+class EntityModal(Widget, GameTickable):
     """A widget to display information about the nearest entity."""
     can_focus = False
 
@@ -56,7 +57,7 @@ class EntityModal(Widget):
     hp = reactive(0)
     max_hp = reactive(0)
     art = reactive([])
-    bearing = reactive(-1.0)  # -1 = no bearing, 0-360 = direction to target
+    bearing = reactive(-1.0)
     description = reactive("")
     destroyed_name = reactive("")
     destroyed_timer = reactive(0.0)
@@ -66,25 +67,28 @@ class EntityModal(Widget):
         self._destroy_art = []
         self._destroy_styles = []
         self._destroy_step = 0
-        self._destroy_anim_timer = None
+        self._destroy_anim_accum = 0.0
+        self._destroy_active = False
 
     def _start_destroy_animation(self, art_lines):
-        """Initialize the destruction animation from the entity's art."""
         self._destroy_art = [list(row) for row in art_lines]
         self._destroy_styles = [[Style() for _ in row] for row in self._destroy_art]
         self._destroy_step = 0
-        if self._destroy_anim_timer:
-            self._destroy_anim_timer.stop()
-        self._destroy_anim_timer = self.set_interval(DESTROYED_ANIM_INTERVAL, self._update_destroy_anim)
+        self._destroy_anim_accum = 0.0
+        self._destroy_active = True
 
-    def _update_destroy_anim(self):
-        """Animate the destruction frame by frame."""
+    def game_tick(self, dt: float) -> None:
+        """Advance the destruction animation via the game loop."""
+        if not self._destroy_active:
+            return
+        self._destroy_anim_accum += dt
+        if self._destroy_anim_accum < DESTROYED_ANIM_INTERVAL:
+            return
+        self._destroy_anim_accum = 0.0
         self._destroy_step += 1
         total = 12
         if self._destroy_step > total:
-            if self._destroy_anim_timer:
-                self._destroy_anim_timer.stop()
-                self._destroy_anim_timer = None
+            self._destroy_active = False
             return
 
         progress = self._destroy_step / total
