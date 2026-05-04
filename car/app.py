@@ -135,6 +135,16 @@ class GenesisModuleApp(App):
                 self.push_screen(GameOverScreen())
                 return
 
+            # Check win condition
+            if gs.has_genesis_module:
+                from .logic.boss import check_escape_reached
+                if check_escape_reached(gs):
+                    gs.game_won = True
+                    self.stop_game_loop()
+                    from .screens.victory import VictoryScreen
+                    self.switch_screen(VictoryScreen())
+                    return
+
             # Process continuous input (held keys) before physics
             world_screen.process_input(dt)
 

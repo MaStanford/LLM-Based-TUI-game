@@ -31,6 +31,40 @@ def _generate_story_intro(app, theme, factions, neutral_faction_name):
     return "You arrive at the neutral city of The Junction, a beacon of tense neutrality in a world torn apart by warring factions. Your goal is simple: find the Genesis Module and escape. The road will be long and dangerous. Good luck."
 
 
+def _generate_victory_story(app, theme, factions, neutral_faction_name):
+    """Generates the victory narration shown when the player escapes."""
+    logging.info("Generating victory story...")
+    mock_game_state = SimpleNamespace(faction_control={})
+    world_state = _format_world_state(factions, mock_game_state)
+
+    faction_names = [data["name"] for data in factions.values() if data.get("faction_boss")]
+
+    prompt = (
+        "You are a master storyteller crafting the VICTORY ENDING for the post-apocalyptic RPG 'Car.'\n\n"
+        f"# CONTEXT\n"
+        f"- **Theme:** '{theme['name']}': {theme['description']}\n"
+        f"- **Factions the player destroyed:** {', '.join(faction_names)}\n"
+        f"- **Neutral city:** {neutral_faction_name}\n"
+        f"- **What happened:** The player destroyed every faction's leader, then defeated "
+        f"the Genesis Engine — an ancient war machine — in the neutral city. They claimed the "
+        f"Genesis Module and drove through a rift at the edge of the wasteland to escape.\n\n"
+        "# INSTRUCTIONS\n"
+        "Write a short, triumphant ending narration (2-3 paragraphs) in a style that fits the theme.\n"
+        "Reflect on the journey, the factions that fell, and the player's escape.\n"
+        "End with a sense of bittersweet freedom — the wasteland is behind them, but it shaped them.\n"
+        "Output *only* the text of the narration. No markdown, no explanation."
+    )
+
+    response = generate_text(app, prompt, max_tokens=512, temperature=0.8)
+    if response:
+        return response
+    return (
+        f"The factions are dust. {neutral_faction_name} stands empty. "
+        "You drive through the rift, leaving the wasteland behind forever. "
+        "The road ahead is unknown, but it is yours."
+    )
+
+
 def _update_stage(app: Any, text: str) -> None:
     """Safely update the WorldBuildingScreen title from a worker thread."""
     try:
@@ -88,13 +122,17 @@ def generate_initial_world_worker(app: Any, new_game_settings: dict) -> Dict:
         world_details = None
         initial_quests = []
         story_intro = None
+        victory_story = None
 
-        with ThreadPoolExecutor(max_workers=5) as pool:
+        with ThreadPoolExecutor(max_workers=6) as pool:
             future_world = pool.submit(
                 generate_world_details_from_llm, app, theme, factions
             )
             future_story = pool.submit(
                 _generate_story_intro, app, theme, factions, neutral_faction_name
+            )
+            future_victory = pool.submit(
+                _generate_victory_story, app, theme, factions, neutral_faction_name
             )
             quest_futures = [
                 pool.submit(
@@ -109,6 +147,7 @@ def generate_initial_world_worker(app: Any, new_game_settings: dict) -> Dict:
 
             world_details = future_world.result()
             story_intro = future_story.result()
+            victory_story = future_victory.result()
             for qf in quest_futures:
                 quest = qf.result()
                 if quest:
@@ -122,6 +161,7 @@ def generate_initial_world_worker(app: Any, new_game_settings: dict) -> Dict:
             "quests": initial_quests,
             "neutral_city_id": neutral_faction_id,
             "story_intro": story_intro,
+            "victory_story": victory_story,
             "world_details": world_details,
             "used_fallback": used_fallback,
         }

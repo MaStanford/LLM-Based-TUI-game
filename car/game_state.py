@@ -152,6 +152,12 @@ class GameState:
         self.quest_cache = {}
         self.quests_completed = 0
 
+        # --- Endgame ---
+        self.has_genesis_module = False
+        self.final_boss_spawned = False
+        self.game_won = False
+        self.victory_story = ""
+
         # --- Story / Journal ---
         self.story_events = []  # List of {"text": str, "event_type": str}
 
@@ -295,6 +301,7 @@ class GameState:
             "car_color_names": self.car_color_names,
             "theme": self.theme,
             "story_intro": self.story_intro,
+            "victory_story": self.victory_story,
             "world_details": self.world_details,
             
             # Player State
@@ -332,6 +339,9 @@ class GameState:
             "quests_completed": self.quests_completed,
             "karma": self.karma,
             "story_events": self.story_events,
+            "has_genesis_module": self.has_genesis_module,
+            "final_boss_spawned": self.final_boss_spawned,
+            "game_won": self.game_won,
             "visited_cities": [list(c) for c in self.visited_cities],
 
             # Building Destruction
@@ -359,6 +369,7 @@ class GameState:
         )
         
         gs.story_intro = data.get("story_intro", "The wasteland awaits.")
+        gs.victory_story = data.get("victory_story", "")
         gs.world_details = WORLD_DETAILS_DATA
         gs.active_triggers = TRIGGERS_DATA
         
@@ -413,6 +424,9 @@ class GameState:
         gs.karma = data.get("karma", 0)
         gs.quests_completed = data.get("quests_completed", 0)
         gs.story_events = data.get("story_events", [])
+        gs.has_genesis_module = data.get("has_genesis_module", False)
+        gs.final_boss_spawned = data.get("final_boss_spawned", False)
+        gs.game_won = data.get("game_won", False)
         gs.visited_cities = {tuple(c) for c in data.get("visited_cities", [(0, 0)])}
 
         # --- Restore Building Destruction State ---

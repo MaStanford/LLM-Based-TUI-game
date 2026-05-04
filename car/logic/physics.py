@@ -47,15 +47,10 @@ def update_physics_and_collisions(game_state, world, audio_manager, dt, app):
             dist_sq = (enemy.x - game_state.car_world_x)**2 + (enemy.y - game_state.car_world_y)**2
             if dist_sq < 225: # 15 units aggro radius
                 from ..screens.combat import CombatScreen
-                from ..logic.combat_logic import BOSS_PHASES
                 game_state.combat_enemy = enemy
                 game_state.menu_open = True
-                # Initialize boss phase state
                 game_state.boss_phase_index = 0
-                game_state.boss_phase_turns = BOSS_PHASES[0]["duration"]
-                game_state.player_defending = False
-                game_state.player_evading = False
-                # Sync player HP into player_car for combat display
+                game_state.boss_tier = getattr(enemy, "boss_tier", "retaliation")
                 game_state.player_car.durability = game_state.current_durability
                 game_state.player_car.max_durability = game_state.max_durability
                 app.push_screen(CombatScreen(game_state.player_car, enemy))

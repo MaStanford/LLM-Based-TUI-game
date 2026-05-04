@@ -10,7 +10,7 @@ from ..widgets.dialog import Dialog
 from ..logic.quest_logic import handle_quest_acceptance, complete_quest
 from ..logic.llm_quest_generator import generate_quest_from_llm
 from ..logic.faction_logic import get_conquest_quest
-from ..logic.boss import check_challenge_conditions, spawn_faction_boss
+from ..logic.boss import check_coup_conditions, spawn_coup_boss
 from ..data.game_constants import CITY_SPACING
 from ..world.generation import get_city_faction, get_buildings_in_city, find_safe_spawn_point
 from ..workers.city_hall_dialog_generator import generate_dialog_worker
@@ -91,7 +91,7 @@ class CityHallScreen(ModalScreen):
                 logging.info(f"Found {len(cached_quests)} quests in cache.")
                 self.available_quests = cached_quests
 
-        self.can_challenge = check_challenge_conditions(gs, self.current_city_faction, gs.factions)
+        self.can_challenge = check_coup_conditions(gs, self.current_city_faction)
 
         self._loading_timer = self.set_interval(2.5, self._cycle_loading_message)
         self.update_quest_display()
@@ -339,8 +339,15 @@ class CityHallScreen(ModalScreen):
         gs = self.app.game_state
 
         if event.button.id == "challenge_boss":
-            spawn_faction_boss(gs, self.current_city_faction)
-            self.app.screen.query_one("#notifications").add_notification(f"Challenge issued!")
+            spawn_coup_boss(gs, self.current_city_faction)
+            for screen in self.app.screen_stack:
+                try:
+                    screen.query_one("#notifications").add_notification(
+                        f"Coup de Grâce! The faction leader emerges!"
+                    )
+                    break
+                except Exception:
+                    continue
             self.app.pop_screen()
             return
 
@@ -360,5 +367,5 @@ class CityHallScreen(ModalScreen):
             yield Dialog("")
             with Vertical():
                 yield Button("Accept", id="accept_quest", variant="primary")
-                yield Button("Challenge Faction Leader", id="challenge_boss", variant="error")
+                yield Button("Coup de Grâce", id="challenge_boss", variant="error")
         yield Footer(show_command_palette=True)
