@@ -24,11 +24,55 @@ _EXPLOSION_SMOKE = [
 
 class GameView(Widget):
     """A widget to display the game world."""
-    
+
     def __init__(self, game_state, world, *args, **kwargs):
         super().__init__(*args, **kwargs)
         self.game_state = game_state
         self.world = world
+
+    def on_mouse_move(self, event) -> None:
+        """Track mouse position for turret aiming."""
+        gs = self.game_state
+        if not gs or not gs.mouse_aim_enabled:
+            return
+        w, h = self.size
+        gs.mouse_aim_world_x = gs.car_world_x - w / 2 + event.x
+        gs.mouse_aim_world_y = gs.car_world_y - h / 2 + event.y
+
+    def on_click(self, event) -> None:
+        """Click-to-target: find the entity nearest to the click position."""
+        gs = self.game_state
+        if not gs:
+            return
+
+        w, h = self.size
+        world_x = gs.car_world_x - w / 2 + event.x
+        world_y = gs.car_world_y - h / 2 + event.y
+
+        best_entity = None
+        best_dist_sq = float("inf")
+        click_radius = 5
+
+        all_targetable = (
+            list(gs.active_enemies)
+            + list(gs.active_turrets)
+            + list(gs.active_obstacles)
+            + list(gs.active_fauna)
+        )
+        for entity in all_targetable:
+            cx = entity.x + entity.width / 2
+            cy = entity.y + entity.height / 2
+            dx = world_x - cx
+            dy = world_y - cy
+            half_w = entity.width / 2 + click_radius
+            half_h = entity.height / 2 + click_radius
+            if abs(dx) <= half_w and abs(dy) <= half_h:
+                dist_sq = dx * dx + dy * dy
+                if dist_sq < best_dist_sq:
+                    best_dist_sq = dist_sq
+                    best_entity = entity
+
+        gs.tracked_entity = best_entity
 
     def render(self) -> Text:
         """Render the game world."""

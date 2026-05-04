@@ -241,7 +241,9 @@ class GenesisModuleApp(App):
                 return
 
     def find_closest_entity(self):
-        """Finds the closest enemy, obstacle, or fauna to the player."""
+        """Finds the closest enemy, obstacle, or fauna to the player.
+        Respects a manually click-targeted entity if it's still alive and in range.
+        """
         gs = self.game_state
         radius_sq = CUTSCENE_RADIUS**2
 
@@ -252,6 +254,16 @@ class GenesisModuleApp(App):
                 "art": entity.get_static_art(), "x": entity.x, "y": entity.y,
                 "description": desc or getattr(entity, "description", ""),
             }
+
+        # Manual click-target takes priority
+        tracked = gs.tracked_entity
+        if tracked is not None:
+            all_active = gs.active_enemies + gs.active_turrets + gs.active_obstacles + gs.active_fauna
+            if tracked in all_active and getattr(tracked, "durability", 0) > 0:
+                dist_sq = (tracked.x - gs.car_world_x)**2 + (tracked.y - gs.car_world_y)**2
+                if dist_sq < radius_sq:
+                    return _make_info(tracked)
+            gs.tracked_entity = None
 
         def _find_nearest(entities, filter_fn=None):
             best, best_dist = None, radius_sq
@@ -264,7 +276,6 @@ class GenesisModuleApp(App):
                     best = e
             return best
 
-        # Priority: boss > enemy > damaged obstacle > damaged fauna > turret
         boss = _find_nearest(gs.active_enemies, lambda e: getattr(e, "is_faction_boss", False))
         if boss:
             return _make_info(boss)

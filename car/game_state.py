@@ -71,6 +71,9 @@ class GameState:
         self.current_gas = 0
         self.distance_traveled = 0.0
         self.weapon_angle_offset = 0.0
+        self.mouse_aim_enabled = False
+        self.mouse_aim_world_x = 0.0
+        self.mouse_aim_world_y = 0.0
 
         # --- Collision Physics ---
         self.deflection_vx = 0.0

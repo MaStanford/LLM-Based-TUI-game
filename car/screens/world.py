@@ -50,6 +50,7 @@ ONE_SHOT_ACTIONS = {
     "f": "show_factions",
     "q": "show_quests",
     "j": "show_story",
+    "x": "toggle_mouse_aim",
     "enter": "show_notifications",
     "grave_accent": "toggle_console",
     "tilde": "toggle_console",
@@ -180,10 +181,26 @@ class WorldScreen(Screen):
         gs.actions["fire"] = "space" in self._pressed_keys
 
         # --- Weapon Aiming (continuous swivel, stat-based) ---
-        if "left" in self._pressed_keys:
-            gs.weapon_angle_offset -= gs.weapon_aim_speed * dt
-        if "right" in self._pressed_keys:
-            gs.weapon_angle_offset += gs.weapon_aim_speed * dt
+        if gs.mouse_aim_enabled:
+            # Mouse aim: rotate weapon_angle_offset toward mouse at swivel speed
+            dx = gs.mouse_aim_world_x - gs.car_world_x
+            dy = gs.mouse_aim_world_y - gs.car_world_y
+            target_world_angle = math.atan2(dy, dx) + math.pi / 2  # convert to game coords (0=N)
+            desired_offset = (target_world_angle - gs.car_angle + math.pi) % (2 * math.pi) - math.pi
+            delta = (desired_offset - gs.weapon_angle_offset + math.pi) % (2 * math.pi) - math.pi
+            max_step = gs.weapon_aim_speed * dt
+            if abs(delta) <= max_step:
+                gs.weapon_angle_offset = desired_offset
+            elif delta > 0:
+                gs.weapon_angle_offset += max_step
+            else:
+                gs.weapon_angle_offset -= max_step
+        else:
+            # Keyboard aim
+            if "left" in self._pressed_keys:
+                gs.weapon_angle_offset -= gs.weapon_aim_speed * dt
+            if "right" in self._pressed_keys:
+                gs.weapon_angle_offset += gs.weapon_aim_speed * dt
 
     # --- One-shot menu actions (still use Textual bindings) ---
 
@@ -191,6 +208,14 @@ class WorldScreen(Screen):
         """No-op action for gameplay keys displayed in footer.
         Actual input is handled by on_key + process_input."""
         pass
+
+    def action_toggle_mouse_aim(self) -> None:
+        """Toggle mouse aim on/off."""
+        gs = self.app.game_state
+        gs.mouse_aim_enabled = not gs.mouse_aim_enabled
+        state = "ON" if gs.mouse_aim_enabled else "OFF"
+        notifications = self.query_one("#notifications", Notifications)
+        notifications.add_notification(f"Mouse Aim: {state}")
 
     def action_toggle_weapon(self, slot: int) -> None:
         """Toggle weapon on/off by slot number (1-indexed)."""

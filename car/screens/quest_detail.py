@@ -126,6 +126,19 @@ class QuestDetailScreen(ModalScreen):
         self.query_one("#abandon_quest", Button).label = "Abandon Quest"
         self._confirm_abandon = False
 
+    def on_click(self, event) -> None:
+        """Handle clicks on the quest list panel."""
+        try:
+            panel = self.query_one("#quest_list_panel")
+            if event.widget is panel or panel in event.widget.ancestors_with_self:
+                quests = self.app.game_state.active_quests
+                if quests and 0 <= event.y < len(quests):
+                    self._viewing_index = event.y
+                    self._confirm_abandon = False
+                    self._update_display()
+        except Exception:
+            pass
+
     def action_switch_quest(self, direction: int) -> None:
         """Switch which quest is being viewed."""
         quests = self.app.game_state.active_quests

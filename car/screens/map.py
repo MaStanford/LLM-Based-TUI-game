@@ -9,6 +9,8 @@ _MOUNT_COOLDOWN = 0.25
 class MapScreen(ModalScreen):
     """The map screen."""
 
+    _mount_time: float = 0.0
+
     BINDINGS = [
         Binding("escape", "go_back", "Back", show=True),
         Binding("m", "toggle_city_mode", "City/World", show=True),

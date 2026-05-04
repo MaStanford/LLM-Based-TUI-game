@@ -1,5 +1,6 @@
 from textual.widgets import Static
 from textual.reactive import reactive
+from textual.message import Message
 from rich.table import Table
 from rich.text import Text
 from ..data.modifiers import RARITY_TIERS
@@ -9,8 +10,21 @@ RARITY_COLORS = {r: d["color"] for r, d in RARITY_TIERS.items()}
 class ItemListWidget(Static):
     """A widget to display a list of items with prices."""
 
+    class ItemClicked(Message):
+        """Posted when the user clicks an item row."""
+        def __init__(self, widget_id: str, index: int) -> None:
+            self.widget_id = widget_id
+            self.index = index
+            super().__init__()
+
     items = reactive([])
     selected_index = reactive(0)
+
+    def on_click(self, event) -> None:
+        """Select the clicked row."""
+        if self.items and 0 <= event.y < len(self.items):
+            self.selected_index = event.y
+            self.post_message(self.ItemClicked(self.id or "", event.y))
 
     @property
     def selected_item(self):

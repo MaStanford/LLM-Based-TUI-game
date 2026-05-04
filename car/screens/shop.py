@@ -209,6 +209,18 @@ class ShopScreen(Screen):
             pane = self.query_one("#player_inventory_pane")
         pane.scroll_relative(y=amount)
 
+    def on_item_list_widget_item_clicked(self, event) -> None:
+        """Handle mouse click on a shop item list."""
+        self.sell_confirmation_item = None
+        wid = event.widget_id
+        if wid == "shop_inventory":
+            self.focused_list = "shop"
+        elif wid == "player_inventory":
+            self.focused_list = "player"
+        self.update_focus()
+        self.update_item_info()
+        self.update_action_button()
+
     def on_button_pressed(self, event: Button.Pressed) -> None:
         """Handle the action button being clicked."""
         if event.button.id == "action_button":

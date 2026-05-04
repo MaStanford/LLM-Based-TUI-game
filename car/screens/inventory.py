@@ -352,6 +352,20 @@ class InventoryScreen(ModalScreen):
         self.update_focus()
         self._update_inventory_prompt()
 
+    def on_item_list_widget_item_clicked(self, event: ItemListWidget.ItemClicked) -> None:
+        """Handle mouse click on an item list."""
+        self.unequip_confirmation_slot = None
+        self.salvage_confirmation_item = None
+        wid = event.widget_id
+        if wid == "inventory":
+            self.focused_list = "inventory"
+        elif wid == "attachments":
+            self.focused_list = "attachments"
+        elif wid == "equipment_slots":
+            self.focused_list = "equipment_slots"
+        self.update_focus()
+        self.update_item_info()
+
     def compose(self):
         """Compose the layout of the screen."""
         yield Header(show_clock=True)

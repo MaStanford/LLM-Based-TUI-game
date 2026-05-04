@@ -210,6 +210,23 @@ On macOS/Linux, pass flags after the script name:
 | `Right Arrow` | Aim weapons right               |
 | `Space`       | Fire weapons                    |
 | `1`-`9`       | Toggle individual weapon mounts |
+| `X`           | Toggle mouse aim on/off         |
+
+### Mouse Controls
+
+The game supports mouse interaction throughout all screens.
+
+| Action              | Where            | Effect                                                  |
+| ------------------- | ---------------- | ------------------------------------------------------- |
+| **Left Click**      | Game world       | Lock an enemy as your target (shown in target modal)    |
+| **Mouse Move**      | Game world       | Aim turret toward cursor (when mouse aim is ON)         |
+| **Left Click**      | Menus/Inventory  | Select/highlight the clicked item                       |
+| **Left Click**      | Buttons          | Press any menu button                                   |
+| **Left Click**      | Quest list       | Select the clicked quest                                |
+
+**Mouse Aim:** Press `X` to toggle. When enabled, your weapons swivel toward the
+mouse cursor at your vehicle's aim speed — heavy turrets rotate slowly, nimble
+ones snap fast. Arrow keys still control aiming when mouse aim is off.
 
 ### Menus and Screens
 
@@ -234,6 +251,7 @@ On macOS/Linux, pass flags after the script name:
 | `Enter`          | Equip or select item                          |
 | `S`              | Salvage item for scrap                        |
 | `A` / `D`        | Rotate car preview                            |
+| `Click`          | Select item in any pane                       |
 | `Esc`            | Back                                          |
 
 ### Shop Screen
@@ -244,6 +262,7 @@ On macOS/Linux, pass flags after the script name:
 | `Shift+Up` / `Down`| Scroll item list quickly               |
 | `Left` / `Right`   | Switch between shop and your inventory |
 | `Enter`            | Buy or sell selected item              |
+| `Click`            | Select item in either pane             |
 | `Esc`              | Leave shop                             |
 
 ### Map Screen

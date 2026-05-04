@@ -277,6 +277,18 @@ class CityHallScreen(ModalScreen):
             accept_button.disabled = True
             accept_button.label = "Accept Quest"
 
+    def on_click(self, event) -> None:
+        """Handle clicks on the quest list."""
+        try:
+            panel = self.query_one("#quest_list")
+            if event.widget is panel or panel in event.widget.ancestors_with_self:
+                total = self._total_items()
+                if total > 0 and 0 <= event.y < total:
+                    self.selected_index = event.y
+                    self.update_quest_display()
+        except Exception:
+            pass
+
     def action_move_selection(self, amount: int) -> None:
         """Move the selection in the quest list."""
         total = self._total_items()
