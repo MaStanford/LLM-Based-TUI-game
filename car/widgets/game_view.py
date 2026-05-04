@@ -74,37 +74,46 @@ class GameView(Widget):
 
             self.draw_entity(canvas, styles, entity, world_start_x, world_start_y, w, h)
 
-        # Render pickups (blink at 4Hz so they're obvious)
-        pickup_visible = time.time() % 0.5 < 0.35
-        if pickup_visible:
-            for pickup in gs.active_pickups.values():
-                px = pickup["x"]
-                py = pickup["y"]
-                # Cull off-screen pickups
-                if px < world_start_x or px > world_end_x or py < world_start_y or py > world_end_y:
-                    continue
-                sx = int(px - world_start_x)
-                sy = int(py - world_start_y)
-                art = pickup.get("char", "$")
-                pickup_type = pickup.get("type", "cash")
-                # Color by type
-                if pickup_type == "cash":
-                    color = "bright_yellow"
-                elif pickup_type == "weapon":
-                    color = "bright_cyan"
-                elif pickup_type == "equipment":
-                    color = "bright_green"
-                elif pickup_type == "narrative":
-                    color = "bright_magenta"
-                else:
-                    color = "bright_white"
-                # Draw each character of the pickup art
-                for i, ch in enumerate(art):
-                    draw_x = sx + i
-                    if 0 <= sy < h and 0 <= draw_x < w:
-                        canvas[sy][draw_x] = ch
-                        existing_style = styles[sy][draw_x]
-                        styles[sy][draw_x] = Style(color=color, bold=True, bgcolor=existing_style.bgcolor)
+        # Render pickups with age-aware blinking.
+        # First half of lifetime: always visible.
+        # Second half: blink period shrinks linearly from 0.5s down to 0.08s.
+        from ..data.game_constants import PICKUP_LIFETIME, PICKUP_BLINK_START
+        now = time.time()
+        for pickup in gs.active_pickups.values():
+            px = pickup["x"]
+            py = pickup["y"]
+            if px < world_start_x or px > world_end_x or py < world_start_y or py > world_end_y:
+                continue
+
+            age = now - pickup.get("spawn_time", now)
+            age_ratio = min(age / PICKUP_LIFETIME, 1.0)
+
+            if age_ratio > PICKUP_BLINK_START:
+                blink_progress = (age_ratio - PICKUP_BLINK_START) / (1.0 - PICKUP_BLINK_START)
+                period = 0.5 - blink_progress * 0.42  # 0.5s → 0.08s
+                if now % period > period * 0.5:
+                    continue  # hidden during blink-off phase
+
+            sx = int(px - world_start_x)
+            sy = int(py - world_start_y)
+            art = pickup.get("char", "$")
+            pickup_type = pickup.get("type", "cash")
+            if pickup_type == "cash":
+                color = "bright_yellow"
+            elif pickup_type == "weapon":
+                color = "bright_cyan"
+            elif pickup_type == "equipment":
+                color = "bright_green"
+            elif pickup_type == "narrative":
+                color = "bright_magenta"
+            else:
+                color = "bright_white"
+            for i, ch in enumerate(art):
+                draw_x = sx + i
+                if 0 <= sy < h and 0 <= draw_x < w:
+                    canvas[sy][draw_x] = ch
+                    existing_style = styles[sy][draw_x]
+                    styles[sy][draw_x] = Style(color=color, bold=True, bgcolor=existing_style.bgcolor)
 
         # Render particles
         for p_state in gs.active_particles:

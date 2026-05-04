@@ -2,6 +2,7 @@ from .vehicle_movement import update_vehicle_movement
 from .weapon_systems import update_weapon_systems
 from .collision_detection import handle_collisions
 import math
+import time
 
 def update_physics_and_collisions(game_state, world, audio_manager, dt, app):
     """
@@ -86,7 +87,15 @@ def update_physics_and_collisions(game_state, world, audio_manager, dt, app):
     game_state.active_fauna = [f for f in game_state.active_fauna if (f.x - game_state.car_world_x)**2 + (f.y - game_state.car_world_y)**2 < despawn_radius_sq]
     game_state.active_obstacles = [o for o in game_state.active_obstacles if (o.x - game_state.car_world_x)**2 + (o.y - game_state.car_world_y)**2 < despawn_radius_sq]
     game_state.active_turrets = [t for t in game_state.active_turrets if (t.x - game_state.car_world_x)**2 + (t.y - game_state.car_world_y)**2 < despawn_radius_sq]
-    
+
+    # 6b. Despawn expired pickups
+    from ..data.game_constants import PICKUP_LIFETIME
+    now = time.time()
+    expired = [pid for pid, p in game_state.active_pickups.items()
+               if now - p.get("spawn_time", now) >= PICKUP_LIFETIME]
+    for pid in expired:
+        del game_state.active_pickups[pid]
+
     # 7. Check for game over condition
     if game_state.current_durability <= 0:
         game_state.game_over = True

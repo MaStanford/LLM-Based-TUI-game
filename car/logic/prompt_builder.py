@@ -192,21 +192,26 @@ def build_quest_prompt(game_state, quest_giver_faction_id, faction_data_override
 
 def build_faction_prompt(theme: dict):
     """Builds the complete, dynamic prompt for faction generation."""
+    from .llm_vehicle_namer import VEHICLE_ROLES
+
     with open("prompts/game_context.txt", "r") as f:
         game_context = f.read()
-        # Replace placeholders within game_context itself
         game_context = game_context.replace("{{ enemy_vehicle_list }}", ", ".join(get_enemy_vehicle_list()))
         game_context = game_context.replace("{{ character_list }}", ", ".join(get_character_list()))
         game_context = game_context.replace("{{ obstacle_list }}", ", ".join(get_obstacle_list()))
 
     with open("prompts/faction_generation_prompt.txt", "r") as f:
         prompt_template = f.read()
-        
+
+    vehicle_roles_str = "\n".join(
+        f"- **{vid}**: {role}" for vid, role in VEHICLE_ROLES.items()
+    )
+
     theme_str = f"The chosen theme for this world is '{theme['name']}': {theme['description']}"
     prompt = prompt_template.replace("{{ game_context }}", game_context)
     prompt = prompt.replace("{{ vehicle_list }}", _get_vehicle_list())
+    prompt = prompt.replace("{{ vehicle_roles }}", vehicle_roles_str)
     prompt = prompt.replace("{{ theme }}", theme_str)
-    # These are now handled within game_context, but we keep them for safety if faction_generation_prompt.txt uses them directly
     prompt = prompt.replace("{{ enemy_vehicle_list }}", ", ".join(get_enemy_vehicle_list()))
     prompt = prompt.replace("{{ character_list }}", ", ".join(get_character_list()))
     prompt = prompt.replace("{{ obstacle_list }}", ", ".join(get_obstacle_list()))

@@ -1,22 +1,16 @@
 import logging
 import time
 import json
+from concurrent.futures import ThreadPoolExecutor, as_completed
 from types import SimpleNamespace
 from typing import Any, Dict
-from textual.message import Message
 
 from ..logic.llm_faction_generator import generate_factions_from_llm, _get_fallback_factions
 from ..logic.llm_quest_generator import generate_quest_from_llm, _get_fallback_quest
 from ..logic.llm_world_details_generator import generate_world_details_from_llm
-from ..logic.llm_vehicle_namer import generate_vehicle_names
 from ..logic.prompt_builder import _format_world_state
 from ..logic.llm_inference import generate_text
 
-class StageUpdate(Message):
-    """A message to update the world building stage."""
-    def __init__(self, data: tuple):
-        self.data = data
-        super().__init__()
 
 def _generate_story_intro(app, theme, factions, neutral_faction_name):
     """Generates the introductory story text."""
@@ -37,9 +31,27 @@ def _generate_story_intro(app, theme, factions, neutral_faction_name):
     return "You arrive at the neutral city of The Junction, a beacon of tense neutrality in a world torn apart by warring factions. Your goal is simple: find the Genesis Module and escape. The road will be long and dangerous. Good luck."
 
 
+def _update_stage(app: Any, text: str) -> None:
+    """Safely update the WorldBuildingScreen title from a worker thread."""
+    try:
+        from ..screens.world_building import WorldBuildingScreen
+        screen = app.screen
+        if isinstance(screen, WorldBuildingScreen):
+            app.call_from_thread(
+                screen.query_one("#title").update,
+                f"[bold]{text}[/bold]",
+            )
+    except Exception:
+        pass
+
+
 def generate_initial_world_worker(app: Any, new_game_settings: dict) -> Dict:
     """
     A worker that generates the complete initial state for a new world.
+
+    Flow:
+      1. Generate factions (includes vehicle names) — sequential, everything depends on this
+      2. Generate world details, quests, and story intro — all in parallel
     """
     logging.info("Initial world generation worker started.")
     start_time = time.time()
@@ -49,9 +61,8 @@ def generate_initial_world_worker(app: Any, new_game_settings: dict) -> Dict:
         theme = new_game_settings["theme"]
         logging.info(f"Generating world with theme: {theme['name']}")
 
-        # Stage 1: Generate Factions
-        app.post_message(StageUpdate(("stage", "Stage 1: Forging Factions...")))
-        time.sleep(0.25)
+        # --- Stage 1: Generate Factions (sequential — everything else depends on this) ---
+        _update_stage(app, "Forging factions and their war machines...")
         factions, factions_fallback = generate_factions_from_llm(app, theme)
         if factions_fallback:
             used_fallback = True
@@ -64,41 +75,44 @@ def generate_initial_world_worker(app: Any, new_game_settings: dict) -> Dict:
             raise ValueError("Could not find a neutral faction at (0,0) in the generated data.")
         neutral_faction_name = factions[neutral_faction_id]['name']
 
-        # Stage 1.5: Name faction vehicles
-        app.post_message(StageUpdate(("stage", "Customizing fleet rosters...")))
-        time.sleep(0.25)
-        for faction_id, faction_info in factions.items():
-            unit_names = generate_vehicle_names(app, theme, faction_id, faction_info)
-            if unit_names:
-                faction_info["unit_names"] = unit_names
+        logging.info(f"Factions ready ({time.time() - start_time:.1f}s). Starting parallel generation...")
+        _update_stage(app, "Building the world in parallel...")
 
-        # Stage 2: Generate World Details
-        app.post_message(StageUpdate(("stage", "Naming the dust bowls...")))
-        time.sleep(0.25)
-        world_details = generate_world_details_from_llm(app, theme, factions)
-
-
-        # Stage 3: Generate Initial Quests
-        app.post_message(StageUpdate(("stage", f"Populating the {theme['name']}...")))
-        time.sleep(0.25)
-        initial_quests = []
+        # --- Stage 2: Everything else in parallel ---
         mock_game_state = SimpleNamespace(
             faction_reputation={}, faction_control={}, quest_log=[],
             difficulty_mods=new_game_settings["difficulty_mods"], theme=theme,
             story_intro="The story is just beginning..."
         )
-        for i in range(3):
-            quest = generate_quest_from_llm(
-                game_state=mock_game_state, quest_giver_faction_id=neutral_faction_id,
-                app=app, faction_data=factions
-            )
-            if quest:
-                initial_quests.append(quest)
 
-        # Stage 4: Generate Story Intro
-        app.post_message(StageUpdate(("stage", "A poet is writing how it begins...")))
-        time.sleep(0.25)
-        story_intro = _generate_story_intro(app, theme, factions, neutral_faction_name)
+        world_details = None
+        initial_quests = []
+        story_intro = None
+
+        with ThreadPoolExecutor(max_workers=5) as pool:
+            future_world = pool.submit(
+                generate_world_details_from_llm, app, theme, factions
+            )
+            future_story = pool.submit(
+                _generate_story_intro, app, theme, factions, neutral_faction_name
+            )
+            quest_futures = [
+                pool.submit(
+                    generate_quest_from_llm,
+                    game_state=mock_game_state,
+                    quest_giver_faction_id=neutral_faction_id,
+                    app=app,
+                    faction_data=factions,
+                )
+                for _ in range(3)
+            ]
+
+            world_details = future_world.result()
+            story_intro = future_story.result()
+            for qf in quest_futures:
+                quest = qf.result()
+                if quest:
+                    initial_quests.append(quest)
 
         end_time = time.time()
         logging.info(f"Initial world generation finished successfully in {end_time - start_time:.2f} seconds.")

@@ -4,7 +4,7 @@ from .llm_inference import generate_json
 from .llm_schemas import VEHICLE_NAMES_SCHEMA
 
 # Base vehicle descriptions for prompt context
-_VEHICLE_ROLES = {
+VEHICLE_ROLES = {
     "armored_truck": "Heavily armored, slow, durable security truck",
     "guard_truck": "Sturdy defensive patrol truck",
     "muscle_car": "Fast, aggressive high-performance car",
@@ -40,7 +40,7 @@ def generate_vehicle_names(app: Any, theme: Dict, faction_id: str, faction_info:
     # Build the vehicle list with role hints
     vehicle_lines = []
     for unit_id in units:
-        role = _VEHICLE_ROLES.get(unit_id, "Unknown vehicle type")
+        role = VEHICLE_ROLES.get(unit_id, "Unknown vehicle type")
         vehicle_lines.append(f"- **{unit_id}**: {role}")
     vehicle_list_str = "\n".join(vehicle_lines)
 

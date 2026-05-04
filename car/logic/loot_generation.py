@@ -1,4 +1,5 @@
 import random
+import time
 from ..data.pickups import PICKUP_DATA, PICKUP_CASH
 from ..data.weapons import WEAPONS_DATA
 from ..data.equipment import EQUIPMENT_DATA
@@ -19,7 +20,8 @@ def handle_enemy_loot_drop(game_state, enemy, app):
         "y": enemy.y,
         "value": cash_dropped,
         "char": PICKUP_DATA[PICKUP_CASH]["art"][0],
-        "color": PICKUP_DATA[PICKUP_CASH]["color_pair_name"]
+        "color": PICKUP_DATA[PICKUP_CASH]["color_pair_name"],
+        "spawn_time": time.time(),
     }
     game_state.next_pickup_id += 1
 
@@ -62,7 +64,8 @@ def handle_enemy_loot_drop(game_state, enemy, app):
             "y": enemy.y,
             "weapon": weapon,
             "char": "W",
-            "color": "PICKUP_GUN"
+            "color": "PICKUP_GUN",
+            "spawn_time": time.time(),
         }
         game_state.next_pickup_id += 1
 
@@ -79,7 +82,8 @@ def handle_enemy_loot_drop(game_state, enemy, app):
             "y": enemy.y + 1,
             "equipment": equipment,
             "char": "E",
-            "color": "PICKUP_EQUIPMENT"
+            "color": "PICKUP_EQUIPMENT",
+            "spawn_time": time.time(),
         }
         game_state.next_pickup_id += 1
 
@@ -98,6 +102,7 @@ def handle_enemy_loot_drop(game_state, enemy, app):
                 "target_y": enemy.y
             },
             "char": "?",
-            "color": "PICKUP_NARRATIVE"
+            "color": "PICKUP_NARRATIVE",
+            "spawn_time": time.time(),
         }
         game_state.next_pickup_id += 1

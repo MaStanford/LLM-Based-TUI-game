@@ -195,15 +195,17 @@ def _apply_entity_bounce(entity_a, entity_b):
 
 def _drop_meat(game_state, x, y):
     """Drops a meat pickup at the given position."""
+    import time as _time
     pickup_id = game_state.next_pickup_id
     game_state.next_pickup_id += 1
     meat_value = random.randint(5, 15)
     game_state.active_pickups[pickup_id] = {
         "x": x, "y": y,
-        "type": "cash",  # Meat sells for cash
+        "type": "cash",
         "value": meat_value,
         "char": "♠",
         "color": "PICKUP_CASH",
+        "spawn_time": _time.time(),
     }
 
 

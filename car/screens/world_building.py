@@ -1,6 +1,5 @@
 import logging
 import time
-import random
 from functools import partial
 from textual.app import ComposeResult
 from textual.containers import Vertical
@@ -11,7 +10,7 @@ from textual.worker import Worker, WorkerState
 
 from ..game_state import GameState
 from ..world import World
-from ..workers.world_generator import generate_initial_world_worker, StageUpdate
+from ..workers.world_generator import generate_initial_world_worker
 from ..data.difficulty import DIFFICULTY_MODIFIERS
 from ..animations.reveal_animation import RevealAnimation
 
@@ -194,12 +193,6 @@ class WorldBuildingScreen(Screen):
         """Press the focused button."""
         if self.focusable_widgets:
             self.focusable_widgets[self.current_focus_index].press()
-
-    def on_stage_update(self, event: StageUpdate) -> None:
-        """Handle stage update messages from the worker."""
-        msg_type, text = event.data
-        if msg_type == "stage":
-            self.query_one("#title", Static).update(f"[bold]{text}[/bold]")
 
     def on_button_pressed(self, event: Button.Pressed) -> None:
         """Handle retry or continue button press."""

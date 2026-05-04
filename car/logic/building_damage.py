@@ -1,4 +1,5 @@
 import random
+import time
 from ..data.game_constants import (
     GENERIC_BUILDING_DURABILITY, BUILDING_DESTROY_REP_LOSS,
     BUILDING_RETALIATION_THRESHOLD, BUILDING_BOSS_THRESHOLD,
@@ -70,6 +71,7 @@ def damage_building(game_state, city_key, idx, building, damage):
             "value": cash_value,
             "char": PICKUP_DATA[PICKUP_CASH]["art"][0],
             "color": PICKUP_DATA[PICKUP_CASH]["color_pair_name"],
+            "spawn_time": time.time(),
         }
 
         # Give XP

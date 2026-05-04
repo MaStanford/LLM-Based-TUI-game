@@ -5,6 +5,10 @@ You are a JSON data generator. Your only task is to create a valid JSON object b
 {{ game_context }}
 ---
 
+## Vehicle Role Reference
+Each vehicle ID below has a gameplay role. Use this when choosing units and writing `unit_names`:
+{{ vehicle_roles }}
+
 # RULES
 1.  The JSON object must contain exactly 5 top-level keys.
 2.  Each top-level key must be a unique, snake_case string representing a faction's ID.
@@ -16,6 +20,7 @@ You are a JSON data generator. Your only task is to create a valid JSON object b
 8.  The `units` list MUST contain 2-4 vehicle names chosen ONLY from the `Enemy Vehicles` list in the **Available Entities** section of the game context.
 9.  Do NOT invent new vehicles. Use only the provided lists.
 10. Adhere to the provided theme: {{ theme }}
+11. The `unit_names` dictionary MUST contain an entry for every vehicle ID listed in `units`. Each entry has a short `name` (1-3 words) and a `description` (one sentence, max 15 words) that fit the faction's personality.
 
 # EXAMPLE OUTPUT
 ```json
@@ -27,34 +32,12 @@ You are a JSON data generator. Your only task is to create a valid JSON object b
     "control": 50,
     "relationships": { "neon_runners": "Hostile", "aether_syndicate": "Hostile", "iron_pioneers": "Neutral", "the_junction": "Neutral" },
     "units": ["RaiderBuggy", "Technical", "RustySedan"],
+    "unit_names": {
+      "RaiderBuggy": {"name": "Bone Skitter", "description": "Stripped-down buggy draped in scavenged bones and wire."},
+      "Technical": {"name": "Gut Hauler", "description": "Gun-truck with a rattling cannon bolted to the bed."},
+      "RustySedan": {"name": "Carrion Crawler", "description": "Expendable wreck sent in first to absorb fire."}
+    },
     "faction_boss": { "name": "Scrap King Klaw", "vehicle": "WarRig", "hp_multiplier": 5.0, "damage_multiplier": 2.5 }
-  },
-  "neon_runners": {
-    "name": "Neon Runners",
-    "description": "Speed-obsessed racers who value style and velocity above all else.",
-    "hub_city_coordinates": [4, -6],
-    "control": 50,
-    "relationships": { "scrap_vultures": "Hostile", "aether_syndicate": "Hostile", "iron_pioneers": "Allied", "the_junction": "Neutral" },
-    "units": ["SportsCar", "Hotrod", "MuscleCar"],
-    "faction_boss": { "name": "Ace Velocity", "vehicle": "SportsCar", "hp_multiplier": 3.5, "damage_multiplier": 3.0 }
-  },
-  "aether_syndicate": {
-    "name": "Aether Syndicate",
-    "description": "A shadowy corporation that deals in pre-apocalypse technology and information.",
-    "hub_city_coordinates": [6, 5],
-    "control": 50,
-    "relationships": { "scrap_vultures": "Hostile", "neon_runners": "Hostile", "iron_pioneers": "Hostile", "the_junction": "Neutral" },
-    "units": ["Sedan", "Hatchback", "Technical"],
-    "faction_boss": { "name": "The Alchemist", "vehicle": "Hatchback", "hp_multiplier": 4.0, "damage_multiplier": 3.5 }
-  },
-  "iron_pioneers": {
-    "name": "Iron Pioneers",
-    "description": "Hardy survivalists and builders, focused on creating a new civilization from the ashes.",
-    "hub_city_coordinates": [-4, -5],
-    "control": 50,
-    "relationships": { "scrap_vultures": "Neutral", "neon_runners": "Allied", "aether_syndicate": "Hostile", "the_junction": "Neutral" },
-    "units": ["Truck", "Van", "PanelWagon"],
-    "faction_boss": { "name": "Mother Lode", "vehicle": "Miner", "hp_multiplier": 6.0, "damage_multiplier": 2.0 }
   },
   "the_junction": {
     "name": "The Junction",
@@ -63,9 +46,14 @@ You are a JSON data generator. Your only task is to create a valid JSON object b
     "control": 100,
     "relationships": { "scrap_vultures": "Neutral", "neon_runners": "Neutral", "aether_syndicate": "Neutral", "iron_pioneers": "Neutral" },
     "units": ["Sedan", "Truck"],
+    "unit_names": {
+      "Sedan": {"name": "Junction Runner", "description": "Beat-up sedan used for local courier runs."},
+      "Truck": {"name": "Watchtower", "description": "Armored truck patrolling the neutral zone perimeter."}
+    },
     "faction_boss": null
   }
 }
 ```
+(Only 2 of 5 factions shown for brevity — your output must have all 5.)
 
 # New Faction Data JSON:

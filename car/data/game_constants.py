@@ -71,6 +71,9 @@ AMMO_HEAVY_BULLET = "heavy_bullet"
 AMMO_FUEL = "fuel"
 
 # Pickup Types
+PICKUP_LIFETIME = 45.0  # Seconds before a pickup despawns
+PICKUP_BLINK_START = 0.5  # Start blinking at 50% lifetime remaining
+
 PICKUP_GAS = "PICKUP_GAS"
 PICKUP_REPAIR = "PICKUP_REPAIR"
 PICKUP_CASH = "PICKUP_CASH"

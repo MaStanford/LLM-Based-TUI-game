@@ -71,9 +71,20 @@ FACTION_SCHEMA = {
                 "type": "array",
                 "items": {"type": "string"}
             },
+            "unit_names": {
+                "type": "object",
+                "additionalProperties": {
+                    "type": "object",
+                    "properties": {
+                        "name": {"type": "string"},
+                        "description": {"type": "string"}
+                    },
+                    "required": ["name", "description"]
+                }
+            },
             "faction_boss": {}
         },
-        "required": ["name", "description", "hub_city_coordinates", "control", "relationships", "units", "faction_boss"]
+        "required": ["name", "description", "hub_city_coordinates", "control", "relationships", "units", "unit_names", "faction_boss"]
     }
 }
 

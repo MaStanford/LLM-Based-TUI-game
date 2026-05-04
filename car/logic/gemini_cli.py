@@ -95,11 +95,10 @@ def generate_with_cli(prompt: str, parse_json: bool = True, timeout: int = 120,
 
     try:
         logging.info(f"Calling {tool_name} (timeout={timeout}s)...")
-        # Run from /tmp to avoid directory-level security prompts (e.g. Claude's
-        # --internet mode flag) that block subprocess execution in the game dir.
-        import tempfile
+        # stdin=DEVNULL prevents the subprocess from reading the terminal, which
+        # would hang inside a Textual TUI where the terminal is in raw mode.
         result = subprocess.run(command, capture_output=True, text=True, check=True,
-                                timeout=timeout, cwd=tempfile.gettempdir())
+                                timeout=timeout, stdin=subprocess.DEVNULL)
 
         raw_output = result.stdout
         logging.info(f"--- RAW CLI LLM RESPONSE ---\n{raw_output}\n-----------------------------")
