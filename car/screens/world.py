@@ -178,7 +178,9 @@ class WorldScreen(Screen):
         # --- Pedal is set directly by on_key events (no per-frame ramp) ---
 
         # --- Firing (continuous while held, gated by weapon cooldowns) ---
-        gs.actions["fire"] = "space" in self._pressed_keys
+        mouse_fire = getattr(gs, "_mouse_fire_frame", False)
+        gs.actions["fire"] = "space" in self._pressed_keys or mouse_fire
+        gs._mouse_fire_frame = False
 
         # --- Weapon Aiming (continuous swivel, stat-based) ---
         if gs.mouse_aim_enabled:

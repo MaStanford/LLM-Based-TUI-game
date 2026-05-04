@@ -1,7 +1,7 @@
 import random
 from ..entities.vehicle import Vehicle
 from ..logic.data_loader import FACTION_DATA
-from ..logic.entity_loader import PLAYER_CARS
+from ..logic.entity_loader import PLAYER_CARS, ALL_VEHICLES, ENEMY_VEHICLES
 from ..data.quests import Quest, KillBossObjective
 from ..logic.quest_logic import check_for_faction_takeover
 from .scaling import get_enemy_scaling
@@ -9,10 +9,11 @@ from .combat_logic import BOSS_TIER_SCALING
 
 
 def _resolve_vehicle_class(vehicle_name):
-    """Find a vehicle class by name from PLAYER_CARS."""
+    """Find a vehicle class by name from all known vehicles."""
+    normalized = vehicle_name.lower().replace(" ", "_")
     return next(
-        (c for c in PLAYER_CARS
-         if c.__name__.lower() == vehicle_name.lower().replace(" ", "_")),
+        (c for c in ALL_VEHICLES
+         if c.__name__.lower() == normalized),
         None,
     )
 

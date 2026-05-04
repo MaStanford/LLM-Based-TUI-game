@@ -39,10 +39,27 @@ class GameView(Widget):
         gs.mouse_aim_world_x = gs.car_world_x - w / 2 + event.x
         gs.mouse_aim_world_y = gs.car_world_y - h / 2 + event.y
 
+    def on_mouse_scroll_up(self, event) -> None:
+        """Scroll up = accelerate."""
+        gs = self.game_state
+        if gs:
+            gs.pedal_position = min(1.0, gs.pedal_position + 0.10)
+
+    def on_mouse_scroll_down(self, event) -> None:
+        """Scroll down = brake / reverse."""
+        gs = self.game_state
+        if gs:
+            gs.pedal_position = max(-1.0, gs.pedal_position - 0.10)
+
     def on_click(self, event) -> None:
-        """Click-to-target: find the entity nearest to the click position."""
+        """Left click = target entity, middle click = fire weapons."""
         gs = self.game_state
         if not gs:
+            return
+
+        if event.button == 2:
+            gs.actions["fire"] = True
+            gs._mouse_fire_frame = True
             return
 
         w, h = self.size

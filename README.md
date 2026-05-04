@@ -219,6 +219,9 @@ The game supports mouse interaction throughout all screens.
 | Action              | Where            | Effect                                                  |
 | ------------------- | ---------------- | ------------------------------------------------------- |
 | **Left Click**      | Game world       | Lock an enemy as your target (shown in target modal)    |
+| **Middle Click**    | Game world       | Fire weapons (alternative to Space)                     |
+| **Scroll Up**       | Game world       | Accelerate (same as W key)                              |
+| **Scroll Down**     | Game world       | Brake / Reverse (same as S key)                         |
 | **Mouse Move**      | Game world       | Aim turret toward cursor (when mouse aim is ON)         |
 | **Left Click**      | Menus/Inventory  | Select/highlight the clicked item                       |
 | **Left Click**      | Buttons          | Press any menu button                                   |

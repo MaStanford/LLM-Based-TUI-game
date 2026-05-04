@@ -8,7 +8,10 @@ import logging
 from .entity_loader import ENEMY_VEHICLES, ENEMY_CHARACTERS, FAUNA, OBSTACLES, ALL_VEHICLES, normalize_class_name
 
 try:
-    from .boss import spawn_faction_boss
+    from .boss import (
+        spawn_faction_boss, spawn_quest_boss, spawn_retaliation_boss,
+        spawn_coup_boss, spawn_final_boss, _grant_genesis_module,
+    )
 except ImportError:
     spawn_faction_boss = None
 
@@ -86,6 +89,12 @@ def execute_command(game_state, world, command_string: str) -> str:
             return _cmd_ammo(game_state, parts[1:])
         elif cmd == "list":
             return _cmd_list(game_state, parts[1:])
+        elif cmd == "boss":
+            return _cmd_boss(game_state, parts[1:])
+        elif cmd == "endgame":
+            return _cmd_endgame(game_state)
+        elif cmd == "genesis":
+            return _cmd_genesis(game_state)
         else:
             return f"Unknown command: '{cmd}'. Type 'help' for a list."
     except Exception as e:
@@ -98,9 +107,13 @@ def execute_command(game_state, world, command_string: str) -> str:
 def _cmd_help():
     return (
         "Commands: spawn, kill, tp, tp_rel, god, heal, gas, "
-        "cash, xp, level, speed, ammo, list, help\n"
+        "cash, xp, level, speed, ammo, list, boss, endgame, genesis, help\n"
         "spawn enemy <class> [dx dy] | spawn boss <faction_id> | "
         "spawn fauna/obstacle <class> [dx dy]\n"
+        "boss quest <faction> | boss retaliation <faction> | "
+        "boss coup <faction> | boss final\n"
+        "endgame — mark all factions destroyed + spawn final boss\n"
+        "genesis — grant Genesis Module (god mode)\n"
         "kill <id> | kill all | tp <x> <y> | tp_rel <dx> <dy>\n"
         "god | heal | gas | cash <n> | xp <n> | level <n> | speed <n>\n"
         "ammo <type> <n> | list enemies | list factions | list all"
@@ -315,3 +328,53 @@ def _cmd_list(game_state, args):
         return "\n".join(lines)
 
     return f"Unknown list type: '{list_type}'. Use enemies, factions, or all."
+
+
+def _cmd_boss(game_state, args):
+    if not args:
+        return "Usage: boss quest|retaliation|coup <faction_id> | boss final"
+
+    tier = args[0].lower()
+
+    if tier == "final":
+        if game_state.final_boss_spawned:
+            return "Final boss already spawned."
+        spawn_final_boss(game_state)
+        return "Spawned The Genesis Engine at (0, 0)!"
+
+    if len(args) < 2:
+        available = ", ".join(game_state.factions.keys())
+        return f"Usage: boss {tier} <faction_id>. Available: {available}"
+
+    faction_id = args[1]
+    if faction_id not in game_state.factions:
+        available = ", ".join(game_state.factions.keys())
+        return f"Unknown faction: '{faction_id}'. Available: {available}"
+
+    if tier == "quest":
+        boss = spawn_quest_boss(game_state, faction_id)
+        return f"Spawned quest boss for '{faction_id}'." if boss else "Spawn failed (no faction_boss data)."
+    elif tier == "retaliation":
+        spawn_retaliation_boss(game_state, faction_id)
+        return f"Spawned retaliation boss for '{faction_id}'."
+    elif tier == "coup":
+        spawn_coup_boss(game_state, faction_id)
+        return f"Spawned coup de grâce boss for '{faction_id}'."
+    else:
+        return f"Unknown tier: '{tier}'. Use quest, retaliation, coup, or final."
+
+
+def _cmd_endgame(game_state):
+    """Mark all non-neutral factions as destroyed and spawn the final boss."""
+    from .boss import _get_non_neutral_factions
+    hostiles = _get_non_neutral_factions(game_state)
+    for fid in hostiles:
+        game_state.defeated_bosses.add(fid)
+    spawn_final_boss(game_state)
+    return f"Destroyed {len(hostiles)} factions. Final boss spawned at (0, 0). Go fight it!"
+
+
+def _cmd_genesis(game_state):
+    """Grant the Genesis Module immediately."""
+    _grant_genesis_module(game_state)
+    return "Genesis Module granted! God mode ON. Drive to The Rift to win."
