@@ -109,10 +109,8 @@ def generate_initial_world_worker(app: Any, new_game_settings: dict) -> Dict:
             raise ValueError("Could not find a neutral faction at (0,0) in the generated data.")
         neutral_faction_name = factions[neutral_faction_id]['name']
 
-        logging.info(f"Factions ready ({time.time() - start_time:.1f}s). Starting parallel generation...")
-        _update_stage(app, "Building the world in parallel...")
+        logging.info(f"Factions ready ({time.time() - start_time:.1f}s).")
 
-        # --- Stage 2: Everything else in parallel ---
         mock_game_state = SimpleNamespace(
             faction_reputation={}, faction_control={}, quest_log=[],
             difficulty_mods=new_game_settings["difficulty_mods"], theme=theme,
@@ -124,34 +122,58 @@ def generate_initial_world_worker(app: Any, new_game_settings: dict) -> Dict:
         story_intro = None
         victory_story = None
 
-        with ThreadPoolExecutor(max_workers=6) as pool:
-            future_world = pool.submit(
-                generate_world_details_from_llm, app, theme, factions
-            )
-            future_story = pool.submit(
-                _generate_story_intro, app, theme, factions, neutral_faction_name
-            )
-            future_victory = pool.submit(
-                _generate_victory_story, app, theme, factions, neutral_faction_name
-            )
-            quest_futures = [
-                pool.submit(
-                    generate_quest_from_llm,
+        use_parallel = app.generation_mode == "gemini_cli"
+
+        if use_parallel:
+            _update_stage(app, "Building the world in parallel...")
+            with ThreadPoolExecutor(max_workers=6) as pool:
+                future_world = pool.submit(
+                    generate_world_details_from_llm, app, theme, factions
+                )
+                future_story = pool.submit(
+                    _generate_story_intro, app, theme, factions, neutral_faction_name
+                )
+                future_victory = pool.submit(
+                    _generate_victory_story, app, theme, factions, neutral_faction_name
+                )
+                quest_futures = [
+                    pool.submit(
+                        generate_quest_from_llm,
+                        game_state=mock_game_state,
+                        quest_giver_faction_id=neutral_faction_id,
+                        app=app,
+                        faction_data=factions,
+                    )
+                    for _ in range(3)
+                ]
+
+                world_details = future_world.result()
+                story_intro = future_story.result()
+                victory_story = future_victory.result()
+                for qf in quest_futures:
+                    quest = qf.result()
+                    if quest:
+                        initial_quests.append(quest)
+        else:
+            _update_stage(app, "Naming the dust bowls...")
+            world_details = generate_world_details_from_llm(app, theme, factions)
+
+            _update_stage(app, "Populating the wasteland...")
+            for i in range(3):
+                quest = generate_quest_from_llm(
                     game_state=mock_game_state,
                     quest_giver_faction_id=neutral_faction_id,
                     app=app,
                     faction_data=factions,
                 )
-                for _ in range(3)
-            ]
-
-            world_details = future_world.result()
-            story_intro = future_story.result()
-            victory_story = future_victory.result()
-            for qf in quest_futures:
-                quest = qf.result()
                 if quest:
                     initial_quests.append(quest)
+
+            _update_stage(app, "A poet writes how it begins...")
+            story_intro = _generate_story_intro(app, theme, factions, neutral_faction_name)
+
+            _update_stage(app, "Envisioning the ending...")
+            victory_story = _generate_victory_story(app, theme, factions, neutral_faction_name)
 
         end_time = time.time()
         logging.info(f"Initial world generation finished successfully in {end_time - start_time:.2f} seconds.")
